@@ -38,7 +38,7 @@ export function LiveModerationPanel({
         <h2 className="text-lg font-bold mb-4">Live Moderation Panel</h2>
 
         {/* Live Player Preview */}
-        <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-lg">
+        <div className="relative aspect-video bg-muted rounded-xl overflow-hidden border border-border shadow-lg">
           {/* Health Indicator Bar */}
           <div className={`absolute top-0 left-0 right-0 h-1 ${healthColor[publishingHealth]}`} />
 
@@ -52,7 +52,7 @@ export function LiveModerationPanel({
           </div>
 
           {/* Live Badge */}
-          <div className="absolute top-4 right-4 px-3 py-1 bg-status-live/90 backdrop-blur-sm rounded-lg flex items-center gap-2">
+          <div className="absolute top-4 right-4 px-3 py-1 bg-status-live backdrop-blur-sm rounded-lg flex items-center gap-2 shadow-lg">
             <div className="w-2 h-2 rounded-full bg-white animate-pulse-glow" />
             <span className="text-white text-xs font-bold uppercase tracking-wide">LIVE</span>
           </div>

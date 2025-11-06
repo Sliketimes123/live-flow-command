@@ -10,55 +10,55 @@ All colors MUST be HSL.
   :root {
     /* Live Dashboard Theme - White & Navy Blue */
     --background: 0 0% 100%;
-    --foreground: 217 91% 12%;
+    --foreground: 217 91% 15%;
 
-    --card: 0 0% 98%;
-    --card-foreground: 217 91% 12%;
+    --card: 0 0% 99%;
+    --card-foreground: 217 91% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 217 91% 12%;
+    --popover-foreground: 217 91% 15%;
 
-    --primary: 217 91% 20%;
+    --primary: 217 91% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 217 91% 12%;
+    --secondary: 214 50% 93%;
+    --secondary-foreground: 217 91% 25%;
 
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 214 40% 94%;
+    --muted-foreground: 217 20% 45%;
 
-    --accent: 217 91% 20%;
+    --accent: 217 91% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
+    --success: 142 76% 40%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 32% 85%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 20%;
+    --border: 214 40% 88%;
+    --input: 214 40% 94%;
+    --ring: 217 91% 40%;
 
     --radius: 1rem;
 
     /* Status Colors */
     --status-live: 0 84% 60%;
-    --status-stable: 142 76% 36%;
+    --status-stable: 142 76% 40%;
     --status-warning: 38 92% 50%;
-    --status-offline: 0 0% 60%;
+    --status-offline: 0 0% 55%;
 
     /* Surface Variants */
-    --surface-elevated: 217 91% 97%;
-    --surface-overlay: 214 32% 91%;
+    --surface-elevated: 217 60% 98%;
+    --surface-overlay: 214 50% 95%;
 
     /* Glow Effects */
-    --glow-primary: 217 91% 20%;
+    --glow-primary: 217 91% 35%;
     --glow-live: 0 84% 60%;
-    --glow-success: 142 76% 36%;
+    --glow-success: 142 76% 40%;
   }
 }
 

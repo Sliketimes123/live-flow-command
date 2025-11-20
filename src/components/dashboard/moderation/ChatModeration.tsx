@@ -1,15 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Search, Star, Users, EyeOff, Copy, Check, List, Grid2X2, Trash2 } from "lucide-react";
+import { Search, Star, EyeOff, Copy, Check, List, Grid2X2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -52,7 +44,6 @@ export function ChatModeration({
 }: ChatModerationProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [isBlockedUsersDialogOpen, setIsBlockedUsersDialogOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -99,49 +90,49 @@ export function ChatModeration({
   }, [messages, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full space-y-4 relative">
+    <div className="flex flex-col h-full space-y-2 relative">
       {/* Search Bar & View Toggle */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Search messages..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-8 h-7 text-xs"
           />
         </div>
-        <div className="inline-flex items-center rounded-lg border border-border bg-muted/30 p-1">
+        <div className="inline-flex items-center rounded border border-border bg-muted/30 p-0.5">
           <Button
             size="sm"
             variant={viewMode === "list" ? "default" : "ghost"}
-            className="h-8 w-8 p-0"
+            className="h-6 w-6 p-0"
             onClick={() => setViewMode("list")}
             aria-pressed={viewMode === "list"}
             title="List view"
           >
-            <List className="w-4 h-4" />
+            <List className="w-3 h-3" />
           </Button>
           <Button
             size="sm"
             variant={viewMode === "grid" ? "default" : "ghost"}
-            className="h-8 w-8 p-0"
+            className="h-6 w-6 p-0"
             onClick={() => setViewMode("grid")}
             aria-pressed={viewMode === "grid"}
             title="Grid view"
           >
-            <Grid2X2 className="w-4 h-4" />
+            <Grid2X2 className="w-3 h-3" />
           </Button>
         </div>
       </div>
 
       {/* Chat Feed */}
-      <ScrollArea className="flex-1 pr-4">
+      <ScrollArea className="flex-1 pr-2">
         <div
           className={
             viewMode === "grid"
-              ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
-              : "space-y-3"
+              ? "grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+              : "space-y-2"
           }
         >
           {filteredMessages.map((msg) => {
@@ -149,81 +140,81 @@ export function ChatModeration({
               return (
                 <div
                   key={msg.id}
-                className={`group p-5 rounded-2xl surface-elevated border border-border hover:border-primary/60 transition-all ${
+                className={`group p-2.5 rounded-lg surface-elevated border border-border hover:border-primary/60 transition-all ${
                     msg.isHighlighted ? "bg-primary/10 border-primary/30" : ""
                   } ${blocked ? "opacity-50" : ""} ${msg.isSelected ? "border-primary/50 bg-primary/5" : ""}`}
                 >
                 <div
-                  className={`flex flex-col gap-3 ${
-                    viewMode === "grid" ? "min-h-[160px]" : ""
+                  className={`flex flex-col gap-1.5 ${
+                    viewMode === "grid" ? "min-h-[120px]" : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="flex items-center flex-wrap gap-2 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center flex-wrap gap-1.5 text-xs">
                         {msg.isSelected && (
-                          <Star className="w-3.5 h-3.5 text-primary fill-primary" />
+                          <Star className="w-3 h-3 text-primary fill-primary" />
                         )}
-                        <span className="font-semibold text-foreground text-base">
+                        <span className="font-semibold text-foreground text-xs">
                           {msg.username}
                         </span>
-                        <span className="text-xs text-muted-foreground tracking-wide">
+                        <span className="text-[10px] text-muted-foreground tracking-wide">
                           {msg.timestamp}
                         </span>
                         {msg.isHighlighted && (
-                          <Star className="w-3.5 h-3.5 text-primary fill-primary" />
+                          <Star className="w-3 h-3 text-primary fill-primary" />
                         )}
                         {blocked && (
-                          <span className="text-xs text-destructive font-medium">(Blocked)</span>
+                          <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-snug">
                         {msg.message}
                       </p>
                     </div>
                     {/* Action Icons */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-9 w-9 p-0"
+                        className="h-7 w-7 p-0"
                         onClick={() => handleToggleHide(msg.id)}
                         title="Hide"
                       >
-                        <EyeOff className="w-4 h-4" />
+                        <EyeOff className="w-3 h-3" />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-9 w-9 p-0"
+                        className="h-7 w-7 p-0"
                         onClick={() => handleToggleSelect(msg.id)}
                         title={msg.isSelected ? "Unselect" : "Select"}
                       >
                         <Star
-                          className={`w-4 h-4 ${msg.isSelected ? "text-primary fill-primary" : ""}`}
+                          className={`w-3 h-3 ${msg.isSelected ? "text-primary fill-primary" : ""}`}
                         />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-9 w-9 p-0"
+                        className="h-7 w-7 p-0"
                         onClick={() => handleCopy(msg.id, msg.message)}
                         title="Copy"
                       >
                         {copiedMessageId === msg.id ? (
-                          <Check className="w-4 h-4 text-primary" />
+                          <Check className="w-3 h-3 text-primary" />
                         ) : (
-                          <Copy className="w-4 h-4" />
+                          <Copy className="w-3 h-3" />
                         )}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-9 w-9 p-0 text-destructive"
+                        className="h-7 w-7 p-0 text-destructive"
                         onClick={() => onDeleteMessage?.(msg.id)}
                         title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </div>
@@ -239,54 +230,6 @@ export function ChatModeration({
         </div>
       </ScrollArea>
 
-      {/* Bottom Right Buttons */}
-      <div className="absolute bottom-4 right-4">
-        {/* Blocked Users Button */}
-        <Dialog open={isBlockedUsersDialogOpen} onOpenChange={setIsBlockedUsersDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 shadow-md">
-              <Users className="w-4 h-4" />
-              Blocked Users
-              {blockedUsers.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs bg-destructive text-destructive-foreground rounded-full">
-                  {blockedUsers.length}
-                </span>
-              )}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Blocked Users</DialogTitle>
-              <DialogDescription>
-                Manage blocked users. You can unblock users to allow them to participate again.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4">
-              {blockedUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No users are currently blocked.
-                </p>
-              ) : (
-                <ScrollArea className="max-h-[400px]">
-                  <div className="space-y-2">
-                    {blockedUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className="p-3 rounded-lg border border-border bg-card"
-                      >
-                        <p className="font-semibold text-foreground">{user.username}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Blocked at {user.blockedAt}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
     </div>
   );
 }

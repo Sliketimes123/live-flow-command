@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CheckCircle2, XCircle, Search, Copy, Check, Ban, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { BlockedUser } from "./ChatModeration";
 
@@ -35,14 +35,16 @@ interface Question {
 interface QAPanelProps {
   onBlockUser?: (username: string) => void;
   blockedUsers?: BlockedUser[];
+  isModerationStopped?: boolean;
 }
 
-export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
+export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = false }: QAPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
   const [copiedQuestionId, setCopiedQuestionId] = useState<string | null>(null);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
+  const [questionsBeforeStop, setQuestionsBeforeStop] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const [questions, setQuestions] = useState<Question[]>([
     {
@@ -114,6 +116,23 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
     setSelectedUserToBlock(null);
   };
 
+  // Track questions when moderation is stopped
+  useEffect(() => {
+    if (isModerationStopped) {
+      // Store current question IDs when moderation is stopped
+      setQuestionsBeforeStop(new Set(questions.map((q) => q.id)));
+    } else {
+      // Clear the set when moderation resumes
+      setQuestionsBeforeStop(new Set());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModerationStopped]);
+
+  // Filter questions to only show those that existed before moderation was stopped
+  const filteredQuestions = isModerationStopped
+    ? questions.filter((q) => questionsBeforeStop.has(q.id))
+    : questions;
+
   // Filter questions based on search query
   const filterQuestions = (questions: Question[]) => {
     if (!searchQuery.trim()) {
@@ -140,26 +159,26 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
     }
   };
 
-  // Get filtered questions
-  const allFilteredQuestions = applyStatusFilter(filterQuestions(questions));
+  // Get filtered questions (apply moderation stop filter first, then search and status filters)
+  const allFilteredQuestions = applyStatusFilter(filterQuestions(filteredQuestions));
   const approvedQuestions = allFilteredQuestions.filter((q) => q.isApproved);
   const pendingQuestions = allFilteredQuestions.filter((q) => !q.isApproved);
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full space-y-2">
       {/* Search Bar and Filter */}
-      <div className="flex gap-3">
+      <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Search questions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-8 h-7 text-xs"
           />
         </div>
         <Select value={filter} onValueChange={(value: "all" | "open" | "closed") => setFilter(value)}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[120px] h-7 text-xs">
             <SelectValue placeholder="Filter" />
           </SelectTrigger>
           <SelectContent>
@@ -172,12 +191,12 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
 
       {/* Approved Questions */}
       {(filter === "all" || filter === "closed") && approvedQuestions.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-success uppercase tracking-wide flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold text-success uppercase tracking-wide flex items-center gap-1.5">
+            <CheckCircle2 className="w-3 h-3" />
             Approved Questions ({approvedQuestions.length})
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {approvedQuestions.map((q) => (
               <QuestionCard
                 key={q.id}
@@ -196,13 +215,13 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
 
       {/* Pending Questions */}
       {(filter === "all" || filter === "open") && (
-        <div className="flex-1 flex flex-col space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-            <XCircle className="w-4 h-4" />
+        <div className="flex-1 flex flex-col space-y-1.5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+            <XCircle className="w-3 h-3" />
             Pending Review ({pendingQuestions.length})
           </h3>
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-2">
+          <ScrollArea className="flex-1 pr-2">
+            <div className="space-y-1.5">
               {pendingQuestions.length > 0 ? (
                 pendingQuestions.map((q) => (
                   <QuestionCard
@@ -274,64 +293,64 @@ function QuestionCard({
   const blocked = isUserBlocked(question.username);
   return (
     <div
-      className={`group p-4 rounded-lg surface-elevated border transition-all ${
+      className={`group p-2 rounded-lg surface-elevated border transition-all ${
         question.isApproved
           ? "border-success/30 bg-success/5"
           : "border-border hover:border-primary/50"
       }`}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-foreground">{question.username}</span>
-            <span className="text-xs text-muted-foreground">{question.timestamp}</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="font-semibold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
             {blocked && (
-              <span className="text-xs text-destructive font-medium">(Blocked)</span>
+              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
             )}
           </div>
-          <p className="text-sm text-foreground/90">{question.question}</p>
+          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* Action Icons */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               onClick={() => onCopy(question.id, question.question)}
               title="Copy"
             >
               {copiedQuestionId === question.id ? (
-                <Check className="w-4 h-4 text-primary" />
+                <Check className="w-3 h-3 text-primary" />
               ) : (
-                <Copy className="w-4 h-4" />
+                <Copy className="w-3 h-3" />
               )}
             </Button>
             {!question.isApproved && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0"
                 onClick={() => onCloseQuestion(question.id)}
                 title="Close Question"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3" />
               </Button>
             )}
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 text-destructive"
+              className="h-7 w-7 p-0 text-destructive"
               onClick={() => onBlockUser(question.username)}
               title="Block user"
               disabled={blocked}
             >
-              <Ban className="w-4 h-4" />
+              <Ban className="w-3 h-3" />
             </Button>
           </div>
-          <Switch checked={question.isApproved} onCheckedChange={() => onToggle(question.id)} />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
+          <Switch checked={question.isApproved} onCheckedChange={() => onToggle(question.id)} className="scale-75" />
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
             {question.isApproved ? "Approved" : "Pending"}
           </span>
         </div>

@@ -1,5 +1,6 @@
-import { Activity, Cpu, Ban, Star, Trash2 } from "lucide-react";
+import { Activity, Cpu, Ban, Star, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,8 @@ interface StatusBarProps {
   onUnblockUser: (username: string) => void;
   onToggleSelect?: (messageId: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  viewType?: "input" | "output";
+  activeSource?: string;
 }
 
 export function StatusBar({
@@ -46,11 +49,14 @@ export function StatusBar({
   onUnblockUser,
   onToggleSelect,
   onDeleteMessage,
+  viewType = "input",
+  activeSource = "Camera-1",
 }: StatusBarProps) {
   const [isBlockUserDialogOpen, setIsBlockUserDialogOpen] = useState(false);
   const [isSelectedChatDialogOpen, setIsSelectedChatDialogOpen] = useState(false);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const healthColor = {
     stable: "text-success bg-success/10 border-success/20",
@@ -109,115 +115,120 @@ export function StatusBar({
     return Array.from(uniqueUsers.values());
   }, [messages, blockedUsers]);
 
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allUsers;
+    }
+    const query = searchQuery.toLowerCase();
+    return allUsers.filter((user) => user.username.toLowerCase().includes(query));
+  }, [allUsers, searchQuery]);
+
   // Get selected messages
   const selectedMessages = useMemo(() => {
     return messages.filter((msg) => msg.isSelected);
   }, [messages]);
 
+  // Mock data for Input and Output
+  const inputData = {
+    primaryInput: activeSource,
+    streamHealth: publishingHealth,
+    inputMode: "HDMI",
+    bitrateCurrent: bitrate,
+    bitrateAverage: 3200,
+    dimension: "1920:1080",
+  };
+
+  const outputData = {
+    primaryOutput: "RTMP Stream",
+    streamHealth: publishingHealth,
+    modes: "Adaptive",
+    qualities: "1080p, 720p, 480p",
+    encrypted: "Yes",
+    frameRate: fps,
+  };
+
   return (
     <Fragment>
-      <footer className="h-12 border-t border-border bg-card/50 backdrop-blur-sm px-6 flex items-center justify-between text-sm">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Publishing:</span>
-          <span
-            className={`px-2 py-1 rounded border font-medium ${healthColor[publishingHealth]}`}
-          >
-            {healthText[publishingHealth]}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4 text-muted-foreground">
-          <span>
-            <span className="font-semibold text-foreground">{bitrate}</span> kbps
-          </span>
-          <span>
-            <span className="font-semibold text-foreground">{fps}</span> FPS
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-muted-foreground" />
-          <span className="text-muted-foreground">CPU:</span>
-          <span className="font-semibold text-foreground">{cpuUsage}%</span>
-        </div>
+      <footer className="h-9 border-t border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between text-xs">
+      <div className="flex items-center gap-3">
+        {/* Status bar can show other information if needed */}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {/* Selected Chat Button */}
         <Dialog open={isSelectedChatDialogOpen} onOpenChange={setIsSelectedChatDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Star className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
+              <Star className="w-3 h-3" />
               Selected Chat
               {selectedMessages.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
                   {selectedMessages.length}
                 </span>
               )}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
             <DialogHeader>
               <DialogTitle>Selected Chats</DialogTitle>
               <DialogDescription>
                 Manage selected chat messages. You can delete, unselect, or block users from here.
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-4">
+            <div className="mt-4 flex-1 flex flex-col min-h-0">
               {selectedMessages.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
+                <p className="text-xs text-muted-foreground text-center py-8">
                   No chats are currently selected.
                 </p>
               ) : (
-                <ScrollArea className="max-h-[400px]">
-                  <div className="space-y-2">
+                <ScrollArea className="flex-1 w-full rounded-md border">
+                  <div className="space-y-1.5 p-2">
                     {selectedMessages.map((msg) => {
                       const blocked = isUserBlocked(msg.username);
                       return (
                         <div
                           key={msg.id}
-                          className="flex items-start justify-between p-3 rounded-lg border border-border bg-card gap-3"
+                          className="flex items-start justify-between p-2 rounded-lg border border-border bg-card gap-2"
                         >
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-foreground">{msg.username}</span>
-                              <span className="text-xs text-muted-foreground">{msg.timestamp}</span>
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="font-semibold text-foreground text-xs">{msg.username}</span>
+                              <span className="text-[10px] text-muted-foreground">{msg.timestamp}</span>
                               {blocked && (
-                                <span className="text-xs text-destructive font-medium">(Blocked)</span>
+                                <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{msg.message}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">{msg.message}</p>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 text-destructive"
+                              className="h-7 w-7 p-0 text-destructive"
                               onClick={() => onDeleteMessage?.(msg.id)}
                               title="Delete"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0"
                               onClick={() => onToggleSelect?.(msg.id)}
                               title="Unselect"
                             >
-                              <Star className="w-4 h-4 text-primary fill-primary" />
+                              <Star className="w-3 h-3 text-primary fill-primary" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 text-destructive"
+                              className="h-7 w-7 p-0 text-destructive"
                               onClick={() => handleBlockRequest(msg.username)}
                               title="Block user"
                               disabled={blocked}
                             >
-                              <Ban className="w-4 h-4" />
+                              <Ban className="w-3 h-3" />
                             </Button>
                           </div>
                         </div>
@@ -227,7 +238,7 @@ export function StatusBar({
                 </ScrollArea>
               )}
             </div>
-            <div className="mt-6 flex justify-end">
+            <div className="mt-4 flex justify-end border-t pt-4">
               <Button onClick={() => setIsSelectedChatDialogOpen(false)}>Apply</Button>
             </div>
           </DialogContent>
@@ -236,37 +247,52 @@ export function StatusBar({
         {/* Block User Button */}
         <Dialog open={isBlockUserDialogOpen} onOpenChange={setIsBlockUserDialogOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Ban className="w-4 h-4" />
+          <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
+            <Ban className="w-3 h-3" />
             Block User
+            {blockedUsers.length > 0 && (
+              <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
+                {blockedUsers.length}
+              </span>
+            )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
           <DialogHeader>
             <DialogTitle>Block / Unblock Users</DialogTitle>
             <DialogDescription>
               Manage user access. Block users to restrict their participation or unblock them to restore access.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            {allUsers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No users found.
+          <div className="mt-4 flex-1 flex flex-col min-h-0">
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-7 text-xs"
+              />
+            </div>
+            {filteredUsers.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">
+                {searchQuery.trim() ? "No users found matching your search." : "No users found."}
               </p>
             ) : (
-              <ScrollArea className="max-h-[400px] pr-4">
-                <div className="space-y-2 pr-4">
-                  {allUsers.map((user) => {
+              <ScrollArea className="flex-1 w-full rounded-md border">
+                <div className="space-y-1.5 p-2.5">
+                  {filteredUsers.map((user) => {
                     const isBlocked = isUserBlocked(user.username);
                     const blockedUserInfo = blockedUsers.find((bu) => bu.username === user.username);
                     return (
                       <div
                         key={user.username}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border bg-card"
+                        className="flex items-center justify-between p-2 rounded-lg border border-border bg-card"
                       >
                         <div className="flex-1">
-                          <p className="font-semibold text-foreground">{user.username}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-semibold text-foreground text-xs">{user.username}</p>
+                          <p className="text-[11px] text-muted-foreground">
                             {isBlocked ? `Blocked at ${blockedUserInfo?.blockedAt || "N/A"}` : "Active"}
                           </p>
                         </div>
@@ -275,7 +301,7 @@ export function StatusBar({
                             variant="outline"
                             size="sm"
                             onClick={() => onUnblockUser(user.username)}
-                            className="gap-2"
+                            className="gap-1 h-7 text-xs px-2"
                           >
                             Unblock
                           </Button>
@@ -284,9 +310,9 @@ export function StatusBar({
                             variant="destructive"
                             size="sm"
                             onClick={() => handleBlockRequest(user.username)}
-                            className="gap-2"
+                            className="gap-1 h-7 text-xs px-2"
                           >
-                            <Ban className="w-4 h-4" />
+                            <Ban className="w-3 h-3" />
                             Block
                           </Button>
                         )}
@@ -297,8 +323,11 @@ export function StatusBar({
               </ScrollArea>
             )}
           </div>
-          <div className="mt-6 flex justify-end">
-            <Button onClick={() => setIsBlockUserDialogOpen(false)}>Apply</Button>
+          <div className="mt-4 flex justify-end border-t pt-4">
+            <Button onClick={() => {
+              setIsBlockUserDialogOpen(false);
+              setSearchQuery("");
+            }}>Apply</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -12,6 +12,12 @@ const Index = () => {
   const [publishingHealth, setPublishingHealth] = useState<"stable" | "warning" | "poor">(
     "stable"
   );
+  const [isModerationStopped, setIsModerationStopped] = useState(false);
+  const [messagesBeforeStop, setMessagesBeforeStop] = useState<Set<string>>(new Set());
+  const [viewType, setViewType] = useState<"input" | "output">("input");
+  const [concurrentUsers, setConcurrentUsers] = useState(3);
+  const [totalUsers, setTotalUsers] = useState(9);
+  const [isRecording, setIsRecording] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -84,12 +90,17 @@ const Index = () => {
     console.log("Settings clicked");
   };
 
-  const handleSourceSwitch = (source: string) => {
-    setActiveSource(source);
-    // Simulate publishing health change
-    const health: Array<"stable" | "warning" | "poor"> = ["stable", "warning", "poor"];
-    setPublishingHealth(health[Math.floor(Math.random() * health.length)]);
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    console.log("Recording started");
   };
+
+  const handleEndEvent = () => {
+    setIsLive(false);
+    setIsRecording(false);
+    console.log("Event ended");
+  };
+
 
   const handleBlockUser = (username: string) => {
     const isAlreadyBlocked = blockedUsers.some((user) => user.username === username);
@@ -136,6 +147,19 @@ const Index = () => {
     console.log("Message copied:", message);
   };
 
+  const handleStopModeration = () => {
+    if (!isModerationStopped) {
+      // Store current message IDs before stopping
+      setMessagesBeforeStop(new Set(messages.map((msg) => msg.id)));
+    }
+    setIsModerationStopped(!isModerationStopped);
+  };
+
+  // Filter messages to only show those that existed before moderation was stopped
+  const filteredMessages = isModerationStopped
+    ? messages.filter((msg) => messagesBeforeStop.has(msg.id))
+    : messages;
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
@@ -143,9 +167,16 @@ const Index = () => {
         isLive={isLive}
         eventTitle="Live Event – Global Summit"
         elapsedTime={elapsedTime}
+        isModerationStopped={isModerationStopped}
+        concurrentUsers={concurrentUsers}
+        totalUsers={totalUsers}
+        isRecording={isRecording}
         onStart={handleStart}
         onStop={handleStop}
         onSettings={handleSettings}
+        onStopModeration={handleStopModeration}
+        onStartRecording={handleStartRecording}
+        onEndEvent={handleEndEvent}
       />
 
       {/* Main Content */}
@@ -155,14 +186,16 @@ const Index = () => {
           <LiveModerationPanel
             publishingHealth={publishingHealth}
             activeSource={activeSource}
-            onSourceSwitch={handleSourceSwitch}
+            bitrate={3500}
+            fps={30}
+            onViewTypeChange={setViewType}
           />
         </aside>
 
         {/* Right Panel - Event Moderation */}
         <section className="flex-1 p-6 overflow-y-auto">
           <EventModerationPanel
-            messages={messages}
+            messages={filteredMessages}
             blockedUsers={blockedUsers}
             onBlockUser={handleBlockUser}
             onUnblockUser={handleUnblockUser}
@@ -170,6 +203,7 @@ const Index = () => {
             onToggleSelect={handleToggleSelect}
             onCopy={handleCopy}
             onDeleteMessage={handleDeleteMessage}
+            isModerationStopped={isModerationStopped}
           />
         </section>
       </main>
@@ -180,12 +214,14 @@ const Index = () => {
         bitrate={3500}
         fps={30}
         cpuUsage={45}
-        messages={messages}
+        messages={filteredMessages}
         blockedUsers={blockedUsers}
         onBlockUser={handleBlockUser}
         onUnblockUser={handleUnblockUser}
         onToggleSelect={handleToggleSelect}
         onDeleteMessage={handleDeleteMessage}
+        viewType={viewType}
+        activeSource={activeSource}
       />
     </div>
   );

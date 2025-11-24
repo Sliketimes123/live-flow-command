@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, Settings, ShieldOff, Eye, Users, Circle } from "lucide-react";
+import { Play, Square, ShieldOff, Eye, Users, Circle, ChevronLeft } from "lucide-react";
 
 interface DashboardHeaderProps {
   isLive: boolean;
@@ -15,6 +15,7 @@ interface DashboardHeaderProps {
   onStopModeration: () => void;
   onStartRecording: () => void;
   onEndEvent: () => void;
+  onBack?: () => void;
 }
 
 export function DashboardHeader({
@@ -31,10 +32,21 @@ export function DashboardHeader({
   onStopModeration,
   onStartRecording,
   onEndEvent,
+  onBack,
 }: DashboardHeaderProps) {
   return (
     <header className="h-12 border-b border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
+        <Button
+          onClick={onBack}
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0"
+          title="Go back"
+        >
+          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+        </Button>
+        <div className="h-4 w-px bg-border" />
         <h1 className="text-sm font-semibold text-foreground">{eventTitle}</h1>
       </div>
 
@@ -98,9 +110,6 @@ export function DashboardHeader({
           )}
           <Button onClick={onEndEvent} size="sm" variant="destructive" className="gap-1 h-7 text-xs px-2">
             END EVENT
-          </Button>
-          <Button onClick={onSettings} size="sm" variant="secondary" className="h-7 w-7 p-0">
-            <Settings className="w-3 h-3" />
           </Button>
         </div>
       </div>

@@ -24,6 +24,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -33,8 +39,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Info, Clock, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw } from "lucide-react";
-import { useState } from "react";
+import { FileText, Info, Clock, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LiveModerationPanelProps {
@@ -85,8 +91,10 @@ export function LiveModerationPanel({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showStreamKey, setShowStreamKey] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showPreviewTooltip, setShowPreviewTooltip] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<string>("");
   const [momentsAllowed, setMomentsAllowed] = useState<string>("no");
+  const [eventId] = useState<string>("npn57jcgzzo"); // Event ID
   const [isResetStreamDialogOpen, setIsResetStreamDialogOpen] = useState(false);
   
   // Settings toggles
@@ -100,6 +108,13 @@ export function LiveModerationPanel({
   const [qnaEnabled, setQnaEnabled] = useState(true);
   
   const { toast } = useToast();
+
+  // Reset tooltip when Info Section dialog opens
+  useEffect(() => {
+    if (isInfoSectionOpen) {
+      setShowPreviewTooltip(false);
+    }
+  }, [isInfoSectionOpen]);
 
   // Mock screenshots data
   const screenshots: Screenshot[] = [
@@ -162,6 +177,19 @@ export function LiveModerationPanel({
   const handleOpenPreview = () => {
     // Redirect to preview screen - you can customize this URL
     window.open("/preview", "_blank");
+  };
+
+  const handleInvite = () => {
+    toast({
+      title: "Invite",
+      description: "Invite functionality coming soon",
+    });
+  };
+
+  const handleCopyEventUrl = () => {
+    // Construct the event URL - you may need to adjust this based on your actual URL structure
+    const eventUrl = `${window.location.origin}/event/${eventId}`;
+    handleCopy(eventUrl, "Event URL");
   };
 
   const handleResetStream = () => {
@@ -233,6 +261,7 @@ export function LiveModerationPanel({
     bitrateCurrent: bitrate,
     bitrateAverage: 3200,
     dimension: "1920:1080",
+    frameRate: fps,
   };
 
   // Output stream data
@@ -282,6 +311,27 @@ export function LiveModerationPanel({
           </div>
         </div>
 
+        {/* Event ID */}
+        <div className="mt-2 flex items-center justify-start">
+          <button
+            onClick={() => handleCopy(eventId, "Event ID")}
+            className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
+            title="Click to copy Event ID"
+          >
+            <img 
+              src="/slike_mini.svg" 
+              alt="Event ID Logo" 
+              className="w-4 h-4 flex-shrink-0"
+            />
+            <span className="font-mono text-xs">{eventId}</span>
+            {copiedField === "Event ID" ? (
+              <Check className="w-3 h-3 text-primary" />
+            ) : (
+              <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </button>
+        </div>
+
         {/* Stream Health Information */}
         <div className="mt-2 space-y-2">
           {/* Input Stream Health */}
@@ -310,6 +360,10 @@ export function LiveModerationPanel({
                 <span className="text-muted-foreground font-medium text-[10px]">DIMENSION:</span>
                 <span className="font-semibold text-foreground text-xs">{inputData.dimension}</span>
               </div>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground font-medium text-[10px]">FRAME RATE:</span>
+                <span className="font-semibold text-foreground text-xs">{inputData.frameRate} FPS</span>
+              </div>
             </div>
           </div>
 
@@ -336,10 +390,6 @@ export function LiveModerationPanel({
               <div className="flex items-center gap-1">
                 <span className="text-muted-foreground font-medium text-[10px]">ENCRYPTED:</span>
                 <span className="font-semibold text-foreground text-xs">{outputData.encrypted}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">FRAME RATE:</span>
-                <span className="font-semibold text-foreground text-xs">{outputData.frameRate} FPS</span>
               </div>
             </div>
           </div>
@@ -476,31 +526,86 @@ export function LiveModerationPanel({
                 <div className="space-y-2 relative">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-base font-semibold text-foreground flex-1">{eventTitle}</h3>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1">
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip
+                          open={showPreviewTooltip}
+                          onOpenChange={setShowPreviewTooltip}
+                          delayDuration={300}
+                        >
+                          <TooltipTrigger
+                            asChild
+                            onMouseEnter={() => setShowPreviewTooltip(true)}
+                            onMouseLeave={() => setShowPreviewTooltip(false)}
+                            onFocus={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.blur();
+                            }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={handleOpenPreview}
+                              tabIndex={-1}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Open to Preview</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0"
-                            onClick={handleOpenPreview}
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Open to Preview</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={handleInvite}>
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Invite
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleCopyEventUrl}>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy URL
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">{eventDescription}</p>
                   
-                  {/* Date and Time */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
-                    <span>{eventDate}</span>
-                    <span>•</span>
-                    <span>{eventTime}</span>
+                  {/* Date and Time with Event ID */}
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      <span>{eventDate}</span>
+                      <span>•</span>
+                      <span>{eventTime}</span>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(eventId, "Event ID")}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
+                      title="Click to copy Event ID"
+                    >
+                      <img 
+                        src="/slike_mini.svg" 
+                        alt="Event ID Logo" 
+                        className="w-4 h-4 flex-shrink-0"
+                      />
+                      <span className="font-mono text-xs">{eventId}</span>
+                      {copiedField === "Event ID" ? (
+                        <Check className="w-3 h-3 text-primary" />
+                      ) : (
+                        <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -578,52 +683,56 @@ export function LiveModerationPanel({
             </div>
 
               {/* Right Side - Live Channels and Social Publish */}
-              <div className="flex-1 max-w-[50%] space-y-6">
-                {/* LIVE CHANNELS Section */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                    Live Channels
-                  </h3>
-                  <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="SELECT LIVE CHANNEL" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="channel1">Channel 1</SelectItem>
-                      <SelectItem value="channel2">Channel 2</SelectItem>
-                      <SelectItem value="channel3">Channel 3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="flex-1 max-w-[50%] flex flex-col min-h-0">
+                <ScrollArea className="flex-1 w-full">
+                  <div className="space-y-6 pr-6">
+                    {/* LIVE CHANNELS Section */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                        Live Channels
+                      </h3>
+                      <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="SELECT LIVE CHANNEL" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="channel1">Channel 1</SelectItem>
+                          <SelectItem value="channel2">Channel 2</SelectItem>
+                          <SelectItem value="channel3">Channel 3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                {/* SOCIAL PUBLISH Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                      Social Publish
-                    </h3>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="h-7 w-7 p-0 rounded-full"
-                      onClick={() => {
-                        toast({
-                          title: "Add Social Destination",
-                          description: "Feature coming soon",
-                        });
-                      }}
-                      title="Add Social Destination"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {/* Placeholder for social destinations list */}
-                    <div className="text-xs text-muted-foreground">
-                      No social destinations added yet
+                    {/* SOCIAL PUBLISH Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide flex-1">
+                          Social Publish
+                        </h3>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 w-7 p-0 rounded-full flex-shrink-0"
+                          onClick={() => {
+                            toast({
+                              title: "Add Social Destination",
+                              description: "Feature coming soon",
+                            });
+                          }}
+                          title="Add Social Destination"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {/* Placeholder for social destinations list */}
+                        <div className="text-xs text-muted-foreground">
+                          No social destinations added yet
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </ScrollArea>
               </div>
             </div>
           </div>

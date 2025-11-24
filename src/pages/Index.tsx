@@ -90,6 +90,11 @@ const Index = () => {
     console.log("Settings clicked");
   };
 
+  const handleBack = () => {
+    console.log("Back clicked");
+    // Add navigation logic here if needed
+  };
+
   const handleStartRecording = () => {
     setIsRecording(true);
     console.log("Recording started");
@@ -177,6 +182,7 @@ const Index = () => {
         onStopModeration={handleStopModeration}
         onStartRecording={handleStartRecording}
         onEndEvent={handleEndEvent}
+        onBack={handleBack}
       />
 
       {/* Main Content */}

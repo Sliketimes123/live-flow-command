@@ -189,6 +189,12 @@ const Index = () => {
             bitrate={3500}
             fps={30}
             onViewTypeChange={setViewType}
+            eventTitle="Live Event – Global Summit"
+            eventDescription="Join us for an exciting live event featuring industry leaders and innovative discussions. This event brings together experts from various fields to share insights and engage in meaningful conversations."
+            eventDate="Nov 20, 2025"
+            eventTime={new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+            rtmpUrl="rtmp://studio-vwfeyv.sli.ke/live/"
+            streamKey="npn57eigzo"
           />
         </aside>
 

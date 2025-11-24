@@ -32,7 +32,7 @@ export function EventModerationPanel({
 
       <Tabs defaultValue="chat" className="flex-1 flex flex-col">
         <TabsList className="w-full">
-          <TabsTrigger value="chat">Chat Moderation</TabsTrigger>
+          <TabsTrigger value="chat">Chats</TabsTrigger>
           <TabsTrigger value="qa">Q&A Panel</TabsTrigger>
           <TabsTrigger value="summary">Event Summary</TabsTrigger>
         </TabsList>

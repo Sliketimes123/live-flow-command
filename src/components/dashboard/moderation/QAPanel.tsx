@@ -10,6 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -19,8 +26,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, XCircle, Search, Copy, Check, Ban, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Copy, Check, Ban, X, ChevronDown, User, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { BlockedUser } from "./ChatModeration";
 
@@ -30,6 +38,9 @@ interface Question {
   question: string;
   timestamp: string;
   isApproved: boolean;
+  status: "queue" | "selected" | "closed";
+  assignedTo?: string;
+  isHidden?: boolean;
 }
 
 interface QAPanelProps {
@@ -40,7 +51,6 @@ interface QAPanelProps {
 
 export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = false }: QAPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
   const [copiedQuestionId, setCopiedQuestionId] = useState<string | null>(null);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
@@ -52,7 +62,9 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
       username: "CuriousUser",
       question: "What are the key takeaways from this session?",
       timestamp: "2:30 PM",
-      isApproved: true,
+      isApproved: false,
+      status: "queue",
+      isHidden: false,
     },
     {
       id: "2",
@@ -60,13 +72,17 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
       question: "Can you provide more details about the implementation?",
       timestamp: "2:32 PM",
       isApproved: false,
+      status: "queue",
+      isHidden: false,
     },
     {
       id: "3",
       username: "TechEnthusiast",
       question: "How does this compare to other solutions?",
       timestamp: "2:35 PM",
-      isApproved: true,
+      isApproved: false,
+      status: "queue",
+      isHidden: false,
     },
     {
       id: "4",
@@ -74,8 +90,31 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
       question: "What tools do you recommend for beginners?",
       timestamp: "2:38 PM",
       isApproved: false,
+      status: "queue",
+      isHidden: false,
     },
   ]);
+
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedQuestionForAssign, setSelectedQuestionForAssign] = useState<string | null>(null);
+  const [assignSearchQuery, setAssignSearchQuery] = useState("");
+  const [selectedParticipant, setSelectedParticipant] = useState<string>("");
+
+  // Mock participants list
+  const participants = useMemo(() => [
+    "All",
+    "P1",
+    "Arvind Prasanna",
+    "John Doe",
+    "Jane Smith",
+    "Admin User",
+  ], []);
+
+  const filteredParticipants = useMemo(() => {
+    if (!assignSearchQuery.trim()) return participants;
+    const query = assignSearchQuery.toLowerCase();
+    return participants.filter((p) => p.toLowerCase().includes(query));
+  }, [participants, assignSearchQuery]);
 
   const toggleApproval = (id: string) => {
     setQuestions((prev) =>
@@ -85,8 +124,70 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
 
   const handleCloseQuestion = (id: string) => {
     setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, isApproved: true } : q))
+      prev.map((q) => (q.id === id ? { ...q, isApproved: true, status: "closed" as const } : q))
     );
+  };
+
+  const handleSelectQuestion = (id: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, status: "selected" as const } : q))
+    );
+    toast({
+      title: "Question Selected",
+      description: "Question moved to Selected tab",
+    });
+  };
+
+  const handleSkipQuestion = (id: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, status: "closed" as const } : q))
+    );
+    toast({
+      title: "Question Skipped",
+      description: "Question moved to Closed tab",
+    });
+  };
+
+  const handleQueueQuestion = (id: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, status: "queue" as const } : q))
+    );
+    toast({
+      title: "Question Queued",
+      description: "Question moved to Queue tab",
+    });
+  };
+
+  const handleShowHide = (id: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, isHidden: !q.isHidden } : q))
+    );
+  };
+
+  const handleAssignClick = (id: string) => {
+    setSelectedQuestionForAssign(id);
+    setIsAssignDialogOpen(true);
+    setSelectedParticipant("");
+    setAssignSearchQuery("");
+  };
+
+  const handleAssignQuestion = () => {
+    if (selectedQuestionForAssign && selectedParticipant) {
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === selectedQuestionForAssign
+            ? { ...q, assignedTo: selectedParticipant }
+            : q
+        )
+      );
+      toast({
+        title: "Question Assigned",
+        description: `Question assigned to ${selectedParticipant}`,
+      });
+      setIsAssignDialogOpen(false);
+      setSelectedQuestionForAssign(null);
+      setSelectedParticipant("");
+    }
   };
 
   const handleCopy = (questionId: string, question: string) => {
@@ -146,113 +247,143 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
     );
   };
 
-  // Apply status filter (all, open, closed)
-  const applyStatusFilter = (questions: Question[]) => {
-    switch (filter) {
-      case "open":
-        return questions.filter((q) => !q.isApproved);
-      case "closed":
-        return questions.filter((q) => q.isApproved);
-      case "all":
-      default:
-        return questions;
-    }
-  };
 
-  // Get filtered questions (apply moderation stop filter first, then search and status filters)
-  const allFilteredQuestions = applyStatusFilter(filterQuestions(filteredQuestions));
-  const approvedQuestions = allFilteredQuestions.filter((q) => q.isApproved);
-  const pendingQuestions = allFilteredQuestions.filter((q) => !q.isApproved);
+  // Get filtered questions by status
+  const queueQuestions = useMemo(() => {
+    return filterQuestions(filteredQuestions.filter((q) => q.status === "queue"));
+  }, [filteredQuestions, searchQuery]);
+
+  const selectedQuestions = useMemo(() => {
+    return filterQuestions(filteredQuestions.filter((q) => q.status === "selected"));
+  }, [filteredQuestions, searchQuery]);
+
+  const closedQuestions = useMemo(() => {
+    return filterQuestions(filteredQuestions.filter((q) => q.status === "closed"));
+  }, [filteredQuestions, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full space-y-2">
-      {/* Search Bar and Filter */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search questions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-7 text-xs"
-          />
-        </div>
-        <Select value={filter} onValueChange={(value: "all" | "open" | "closed") => setFilter(value)}>
-          <SelectTrigger className="w-[120px] h-7 text-xs">
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+    <div className="flex flex-col h-full">
+      <Tabs defaultValue="queue" className="flex-1 flex flex-col">
+        <TabsList className="w-full h-6 p-0.5 mb-0">
+          <TabsTrigger value="queue" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Queue</TabsTrigger>
+          <TabsTrigger value="selected" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Selected</TabsTrigger>
+          <TabsTrigger value="closed" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Closed</TabsTrigger>
+        </TabsList>
 
-      {/* Approved Questions */}
-      {(filter === "all" || filter === "closed") && approvedQuestions.length > 0 && (
-        <div className="space-y-1.5">
-          <h3 className="text-xs font-semibold text-success uppercase tracking-wide flex items-center gap-1.5">
-            <CheckCircle2 className="w-3 h-3" />
-            Approved Questions ({approvedQuestions.length})
-          </h3>
-          <div className="space-y-1.5">
-            {approvedQuestions.map((q) => (
-              <QuestionCard
-                key={q.id}
-                question={q}
-                onToggle={toggleApproval}
-                onCopy={handleCopy}
-                onCloseQuestion={handleCloseQuestion}
-                onBlockUser={handleBlockRequest}
-                copiedQuestionId={copiedQuestionId}
-                isUserBlocked={isUserBlocked}
-              />
-            ))}
+        <TabsContent value="queue" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-7 text-xs"
+            />
           </div>
-        </div>
-      )}
 
-      {/* Pending Questions */}
-      {(filter === "all" || filter === "open") && (
-        <div className="flex-1 flex flex-col space-y-1.5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-            <XCircle className="w-3 h-3" />
-            Pending Review ({pendingQuestions.length})
-          </h3>
+          {/* Queue Questions */}
           <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-1.5">
-              {pendingQuestions.length > 0 ? (
-                pendingQuestions.map((q) => (
-                  <QuestionCard
+            <div className="space-y-2">
+              {queueQuestions.length > 0 ? (
+                queueQuestions.map((q) => (
+                  <QueueQuestionCard
                     key={q.id}
                     question={q}
-                    onToggle={toggleApproval}
+                    onSelect={handleSelectQuestion}
+                    onSkip={handleSkipQuestion}
+                    onAssign={handleAssignClick}
                     onCopy={handleCopy}
-                    onCloseQuestion={handleCloseQuestion}
                     onBlockUser={handleBlockRequest}
                     copiedQuestionId={copiedQuestionId}
                     isUserBlocked={isUserBlocked}
                   />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No pending questions found.
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  No questions in queue.
                 </p>
               )}
             </div>
           </ScrollArea>
-        </div>
-      )}
+        </TabsContent>
 
-      {/* Empty State */}
-      {allFilteredQuestions.length === 0 && (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground text-center">
-            No questions found matching your search criteria.
-          </p>
-        </div>
-      )}
+        <TabsContent value="selected" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-7 text-xs"
+            />
+          </div>
+
+          {/* Selected Questions */}
+          <ScrollArea className="flex-1 pr-2">
+          <div className="space-y-2">
+              {selectedQuestions.length > 0 ? (
+                selectedQuestions.map((q) => (
+                  <SelectedQuestionCard
+                    key={q.id}
+                    question={q}
+                    onShowHide={handleShowHide}
+                    onSkip={handleSkipQuestion}
+                    onAssign={handleAssignClick}
+                    onCopy={handleCopy}
+                    onBlockUser={handleBlockRequest}
+                    copiedQuestionId={copiedQuestionId}
+                    isUserBlocked={isUserBlocked}
+                  />
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  No selected questions.
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="closed" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden" >
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-7 text-xs"
+            />
+          </div>
+
+          {/* Closed Questions */}
+          <ScrollArea className="flex-1 pr-2">
+            <div className="space-y-2">
+              {closedQuestions.length > 0 ? (
+                closedQuestions.map((q) => (
+                  <ClosedQuestionCard
+                    key={q.id}
+                    question={q}
+                    onSelect={handleSelectQuestion}
+                    onQueue={handleQueueQuestion}
+                    onAssign={handleAssignClick}
+                    onCopy={handleCopy}
+                    onBlockUser={handleBlockRequest}
+                    copiedQuestionId={copiedQuestionId}
+                    isUserBlocked={isUserBlocked}
+                  />
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  No closed questions.
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
 
       {/* Confirm Block Dialog */}
       <AlertDialog open={isConfirmBlockOpen} onOpenChange={setIsConfirmBlockOpen}>
@@ -269,6 +400,323 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Assign Question Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Assign Question</DialogTitle>
+            <DialogDescription className="text-xs">
+              Select a participant to assign this question to
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search User"
+                value={assignSearchQuery}
+                onChange={(e) => setAssignSearchQuery(e.target.value)}
+                className="pl-8 h-7 text-xs"
+              />
+            </div>
+
+            {/* Participants List */}
+            <ScrollArea className="h-[200px] pr-2">
+              <div className="space-y-1">
+                {filteredParticipants.map((participant) => (
+                  <button
+                    key={participant}
+                    onClick={() => setSelectedParticipant(participant)}
+                    className={`w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-colors ${
+                      selectedParticipant === participant
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border hover:bg-accent"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="w-3 h-3" />
+                      <span>{participant}</span>
+                    </div>
+                    {selectedParticipant === participant && (
+                      <Check className="w-3 h-3" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+
+            {/* Assign Button */}
+            <Button
+              onClick={handleAssignQuestion}
+              disabled={!selectedParticipant}
+              className="w-full h-7 text-xs"
+            >
+              Assign
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function QueueQuestionCard({
+  question,
+  onSelect,
+  onSkip,
+  onAssign,
+  onCopy,
+  onBlockUser,
+  copiedQuestionId,
+  isUserBlocked,
+}: {
+  question: Question;
+  onSelect: (id: string) => void;
+  onSkip: (id: string) => void;
+  onAssign: (id: string) => void;
+  onCopy: (questionId: string, question: string) => void;
+  onBlockUser: (username: string) => void;
+  copiedQuestionId: string | null;
+  isUserBlocked: (username: string) => boolean;
+}) {
+  const blocked = isUserBlocked(question.username);
+  return (
+    <div className="p-2 rounded-lg border border-border bg-card">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="font-semibold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
+            {blocked && (
+              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+            )}
+            {question.assignedTo && (
+              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+            )}
+          </div>
+          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
+          onClick={() => onCopy(question.id, question.question)}
+          title="Copy"
+        >
+          {copiedQuestionId === question.id ? (
+            <Check className="w-3 h-3 text-primary" />
+          ) : (
+            <Copy className="w-3 h-3" />
+          )}
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1"
+          onClick={() => onSelect(question.id)}
+        >
+          Select
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1"
+          onClick={() => onSkip(question.id)}
+        >
+          Skip
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1 gap-1"
+          onClick={() => onAssign(question.id)}
+        >
+          Assign
+          <ChevronDown className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SelectedQuestionCard({
+  question,
+  onShowHide,
+  onSkip,
+  onAssign,
+  onCopy,
+  onBlockUser,
+  copiedQuestionId,
+  isUserBlocked,
+}: {
+  question: Question;
+  onShowHide: (id: string) => void;
+  onSkip: (id: string) => void;
+  onAssign: (id: string) => void;
+  onCopy: (questionId: string, question: string) => void;
+  onBlockUser: (username: string) => void;
+  copiedQuestionId: string | null;
+  isUserBlocked: (username: string) => boolean;
+}) {
+  const blocked = isUserBlocked(question.username);
+  return (
+    <div className="p-2 rounded-lg border border-border bg-card">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="font-semibold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
+            {blocked && (
+              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+            )}
+            {question.assignedTo && (
+              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              SELECTED
+            </span>
+          </div>
+          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
+          onClick={() => onCopy(question.id, question.question)}
+          title="Copy"
+        >
+          {copiedQuestionId === question.id ? (
+            <Check className="w-3 h-3 text-primary" />
+          ) : (
+            <Copy className="w-3 h-3" />
+          )}
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1 gap-1"
+          onClick={() => onShowHide(question.id)}
+        >
+          {question.isHidden ? (
+            <>
+              <Eye className="w-3 h-3" />
+              Show
+            </>
+          ) : (
+            <>
+              <EyeOff className="w-3 h-3" />
+              Hide
+            </>
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1"
+          onClick={() => onSkip(question.id)}
+        >
+          Skip
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1 gap-1"
+          onClick={() => onAssign(question.id)}
+        >
+          Assign
+          <ChevronDown className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ClosedQuestionCard({
+  question,
+  onSelect,
+  onQueue,
+  onAssign,
+  onCopy,
+  onBlockUser,
+  copiedQuestionId,
+  isUserBlocked,
+}: {
+  question: Question;
+  onSelect: (id: string) => void;
+  onQueue: (id: string) => void;
+  onAssign: (id: string) => void;
+  onCopy: (questionId: string, question: string) => void;
+  onBlockUser: (username: string) => void;
+  copiedQuestionId: string | null;
+  isUserBlocked: (username: string) => boolean;
+}) {
+  const blocked = isUserBlocked(question.username);
+  return (
+    <div className="p-2 rounded-lg border border-border bg-card">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="font-semibold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
+            {blocked && (
+              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+            )}
+            {question.assignedTo && (
+              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              SKIPPED
+            </span>
+          </div>
+          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
+          onClick={() => onCopy(question.id, question.question)}
+          title="Copy"
+        >
+          {copiedQuestionId === question.id ? (
+            <Check className="w-3 h-3 text-primary" />
+          ) : (
+            <Copy className="w-3 h-3" />
+          )}
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1"
+          onClick={() => onSelect(question.id)}
+        >
+          Select
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1"
+          onClick={() => onQueue(question.id)}
+        >
+          Queue
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs flex-1 gap-1"
+          onClick={() => onAssign(question.id)}
+        >
+          Assign
+          <ChevronDown className="w-3 h-3" />
+        </Button>
+      </div>
     </div>
   );
 }

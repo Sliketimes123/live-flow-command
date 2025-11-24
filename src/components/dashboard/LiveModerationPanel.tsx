@@ -1,7 +1,41 @@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mic, MicOff, Eye, EyeOff, Star, ListPlus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { FileText, Info, Clock, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface LiveModerationPanelProps {
   publishingHealth: "stable" | "warning" | "poor";
@@ -9,6 +43,26 @@ interface LiveModerationPanelProps {
   bitrate: number;
   fps: number;
   onViewTypeChange?: (viewType: "input" | "output") => void;
+  eventTitle?: string;
+  eventDescription?: string;
+  eventDate?: string;
+  eventTime?: string;
+  rtmpUrl?: string;
+  streamKey?: string;
+}
+
+interface EventLog {
+  id: string;
+  timestamp: string;
+  category: "Event" | "Live Status" | "Stream";
+  description: string;
+}
+
+interface Screenshot {
+  id: string;
+  timestamp: string;
+  thumbnail: string;
+  title?: string;
 }
 
 export function LiveModerationPanel({
@@ -17,10 +71,141 @@ export function LiveModerationPanel({
   bitrate,
   fps,
   onViewTypeChange,
+  eventTitle = "Live Event – Global Summit",
+  eventDescription = "Join us for an exciting live event featuring industry leaders and innovative discussions.",
+  eventDate = "Nov 20, 2025",
+  eventTime = "11:09 AM",
+  rtmpUrl = "rtmp://studio-vwfeyv.sli.ke/live/",
+  streamKey = "npn57eigzo",
 }: LiveModerationPanelProps) {
   const [viewType, setViewType] = useState<"input" | "output">("input");
-  const [isMuted, setIsMuted] = useState(false);
-  const [isHidden, setIsHidden] = useState(false);
+  const [isEventLogsOpen, setIsEventLogsOpen] = useState(false);
+  const [isInfoSectionOpen, setIsInfoSectionOpen] = useState(false);
+  const [isMomentsOpen, setIsMomentsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showStreamKey, setShowStreamKey] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [momentsAllowed, setMomentsAllowed] = useState<string>("no");
+  const [isResetStreamDialogOpen, setIsResetStreamDialogOpen] = useState(false);
+  
+  // Settings toggles
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
+  const [liveDurationEnabled, setLiveDurationEnabled] = useState(false);
+  const [audienceCountEnabled, setAudienceCountEnabled] = useState(false);
+  const [quickMessagesEnabled, setQuickMessagesEnabled] = useState(false);
+  const [reactionsEnabled, setReactionsEnabled] = useState(true);
+  const [reactionStatsEnabled, setReactionStatsEnabled] = useState(true);
+  const [screenshotsEnabled, setScreenshotsEnabled] = useState(false);
+  const [qnaEnabled, setQnaEnabled] = useState(true);
+  
+  const { toast } = useToast();
+
+  // Mock screenshots data
+  const screenshots: Screenshot[] = [
+    {
+      id: "1",
+      timestamp: "10:57 AM",
+      thumbnail: "/placeholder.svg",
+      title: "Event Start",
+    },
+    {
+      id: "2",
+      timestamp: "10:59 AM",
+      thumbnail: "/placeholder.svg",
+      title: "Live Stream Active",
+    },
+    {
+      id: "3",
+      timestamp: "11:05 AM",
+      thumbnail: "/placeholder.svg",
+      title: "Key Moment 1",
+    },
+    {
+      id: "4",
+      timestamp: "11:15 AM",
+      thumbnail: "/placeholder.svg",
+      title: "Key Moment 2",
+    },
+    {
+      id: "5",
+      timestamp: "11:25 AM",
+      thumbnail: "/placeholder.svg",
+      title: "Q&A Session",
+    },
+    {
+      id: "6",
+      timestamp: "11:35 AM",
+      thumbnail: "/placeholder.svg",
+      title: "Closing Remarks",
+    },
+  ];
+
+  const handleCopy = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast({
+        title: "Copied!",
+        description: `${fieldName} copied to clipboard`,
+      });
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenPreview = () => {
+    // Redirect to preview screen - you can customize this URL
+    window.open("/preview", "_blank");
+  };
+
+  const handleResetStream = () => {
+    setIsResetStreamDialogOpen(false);
+    toast({
+      title: "Stream Reset",
+      description: "The stream has been reset successfully",
+    });
+    // Add your reset stream logic here
+  };
+
+  // Event logs data
+  const eventLogs: EventLog[] = [
+    {
+      id: "1",
+      timestamp: "10:57 AM",
+      category: "Event",
+      description: "Event initializing started",
+    },
+    {
+      id: "2",
+      timestamp: "10:57 AM",
+      category: "Event",
+      description: "Event has been started",
+    },
+    {
+      id: "3",
+      timestamp: "10:59 AM",
+      category: "Live Status",
+      description: "Event is live for audience",
+    },
+    {
+      id: "4",
+      timestamp: "10:59 AM",
+      category: "Stream",
+      description: "",
+    },
+    {
+      id: "5",
+      timestamp: "10:59 AM",
+      category: "Stream",
+      description: "Live streaming is running",
+    },
+  ];
 
   const healthColor = {
     stable: "bg-success",
@@ -168,36 +353,489 @@ export function LiveModerationPanel({
         </h3>
         <div className="grid grid-cols-2 gap-1.5">
           <Button
-            variant={isMuted ? "destructive" : "secondary"}
+            variant="secondary"
             size="sm"
-            onClick={() => setIsMuted(!isMuted)}
             className="gap-1 h-7 text-xs"
+            onClick={() => setIsEventLogsOpen(true)}
           >
-            {isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-            {isMuted ? "Unmute" : "Mute"}
+            <FileText className="w-3 h-3" />
+            Event Logs
           </Button>
 
           <Button
-            variant={isHidden ? "destructive" : "secondary"}
+            variant="secondary"
             size="sm"
-            onClick={() => setIsHidden(!isHidden)}
             className="gap-1 h-7 text-xs"
+            onClick={() => setIsInfoSectionOpen(true)}
           >
-            {isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            {isHidden ? "Show" : "Hide"}
+            <Info className="w-3 h-3" />
+            Info Section
           </Button>
 
-          <Button variant="secondary" size="sm" className="gap-1 h-7 text-xs">
-            <Star className="w-3 h-3" />
-            Highlight
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="gap-1 h-7 text-xs"
+            onClick={() => setIsMomentsOpen(true)}
+          >
+            <Clock className="w-3 h-3" />
+            Moments
           </Button>
 
-          <Button variant="secondary" size="sm" className="gap-1 h-7 text-xs">
-            <ListPlus className="w-3 h-3" />
-            Playlist
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="gap-1 h-7 text-xs"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings className="w-3 h-3" />
+            Settings
           </Button>
         </div>
       </div>
+
+      {/* Event Logs Dialog */}
+      <Dialog open={isEventLogsOpen} onOpenChange={setIsEventLogsOpen}>
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Event Logs</DialogTitle>
+            <DialogDescription>
+              View all event logs and system status information
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 flex flex-col min-h-0 mt-4">
+            {/* Status Bar */}
+            <div className="mb-4 p-2 rounded-lg border border-border bg-card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-foreground">INPUT PRIMARY</span>
+                  <span className="text-xs text-muted-foreground">{bitrate} kb/s</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-xs font-medium text-green-600 dark:text-green-400">Healthy</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Event Logs List */}
+            <ScrollArea className="flex-1">
+              <div className="space-y-2 pr-4">
+                {eventLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 p-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <span className="text-xs text-muted-foreground font-mono whitespace-nowrap mt-0.5">
+                      {log.timestamp}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-bold text-foreground">{log.category}</span>
+                        {log.description && (
+                          <span className="text-xs text-foreground/80">{log.description}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Info Section Dialog */}
+      <Dialog open={isInfoSectionOpen} onOpenChange={setIsInfoSectionOpen}>
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Info Section</DialogTitle>
+            <DialogDescription>
+              View event details and ingestion information
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 flex flex-col min-h-0 mt-4 overflow-y-auto">
+            <div className="flex gap-6">
+              {/* Left Side - Event Details */}
+              <div className="flex-1 max-w-[50%]">
+                {/* Event Preview Section */}
+                <div className="mb-6">
+                {/* Thumbnail Preview */}
+                <div className="relative w-full max-w-2xl aspect-video rounded-lg border border-border bg-muted/30 mb-3 overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-destructive mb-2">BREAKING</div>
+                      <div className="text-sm text-muted-foreground">Live Event Preview</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Title and Description */}
+                <div className="space-y-2 relative">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold text-foreground flex-1">{eventTitle}</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={handleOpenPreview}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Open to Preview</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{eventDescription}</p>
+                  
+                  {/* Date and Time */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
+                    <span>{eventDate}</span>
+                    <span>•</span>
+                    <span>{eventTime}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ingestion Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Ingestion Details
+                </h3>
+
+                {/* Primary RTMP URL */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">Primary RTMP</label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      value={rtmpUrl}
+                      readOnly
+                      className="flex-1 h-8 text-xs font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
+                      title="Copy RTMP URL"
+                    >
+                      {copiedField === "RTMP URL" ? (
+                        <Check className="w-3 h-3 text-primary" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Stream Key (Password) */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">Stream Key</label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type={showStreamKey ? "text" : "password"}
+                      value={streamKey}
+                      readOnly
+                      className="flex-1 h-8 text-xs font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setShowStreamKey(!showStreamKey)}
+                      title={showStreamKey ? "Hide Stream Key" : "Show Stream Key"}
+                    >
+                      {showStreamKey ? (
+                        <EyeOff className="w-3 h-3" />
+                      ) : (
+                        <Eye className="w-3 h-3" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleCopy(streamKey, "Stream Key")}
+                      title="Copy Stream Key"
+                    >
+                      {copiedField === "Stream Key" ? (
+                        <Check className="w-3 h-3 text-primary" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+              {/* Right Side - Live Channels and Social Publish */}
+              <div className="flex-1 max-w-[50%] space-y-6">
+                {/* LIVE CHANNELS Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Live Channels
+                  </h3>
+                  <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="SELECT LIVE CHANNEL" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="channel1">Channel 1</SelectItem>
+                      <SelectItem value="channel2">Channel 2</SelectItem>
+                      <SelectItem value="channel3">Channel 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* SOCIAL PUBLISH Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                      Social Publish
+                    </h3>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-7 w-7 p-0 rounded-full"
+                      onClick={() => {
+                        toast({
+                          title: "Add Social Destination",
+                          description: "Feature coming soon",
+                        });
+                      }}
+                      title="Add Social Destination"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {/* Placeholder for social destinations list */}
+                    <div className="text-xs text-muted-foreground">
+                      No social destinations added yet
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Moments Dialog */}
+      <Dialog open={isMomentsOpen} onOpenChange={setIsMomentsOpen}>
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Moments</DialogTitle>
+            <DialogDescription>
+              View all screenshots captured during the event
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 flex flex-col min-h-0 mt-4">
+            <ScrollArea className="flex-1">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pr-4">
+                {screenshots.map((screenshot) => (
+                  <div
+                    key={screenshot.id}
+                    className="group relative aspect-video rounded-lg border border-border bg-muted/30 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer"
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">Screenshot</div>
+                        <div className="text-[10px] text-muted-foreground">{screenshot.timestamp}</div>
+                      </div>
+                    </div>
+                    {/* Overlay with timestamp and title */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
+                      <div className="text-xs font-semibold text-white mb-1 text-center">
+                        {screenshot.title || "Screenshot"}
+                      </div>
+                      <div className="text-[10px] text-white/80">{screenshot.timestamp}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="text-base">Event Settings</DialogTitle>
+            <DialogDescription className="text-sm">
+              Configure event features and settings
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 flex flex-col min-h-0 mt-3 overflow-y-auto">
+            <div className="space-y-4 max-w-2xl">
+              {/* Toggle Settings */}
+              <div className="space-y-2.5">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Features
+                </h3>
+                
+                <div className="space-y-2">
+                  {/* Comments */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Comments
+                    </label>
+                    <Switch
+                      checked={commentsEnabled}
+                      onCheckedChange={setCommentsEnabled}
+                    />
+                  </div>
+
+                  {/* Live Duration */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Live Duration
+                    </label>
+                    <Switch
+                      checked={liveDurationEnabled}
+                      onCheckedChange={setLiveDurationEnabled}
+                    />
+                  </div>
+
+                  {/* Audience Count */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Audience Count
+                    </label>
+                    <Switch
+                      checked={audienceCountEnabled}
+                      onCheckedChange={setAudienceCountEnabled}
+                    />
+                  </div>
+
+                  {/* Quick Messages */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Quick Messages
+                    </label>
+                    <Switch
+                      checked={quickMessagesEnabled}
+                      onCheckedChange={setQuickMessagesEnabled}
+                    />
+                  </div>
+
+                  {/* Reactions */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Reactions
+                    </label>
+                    <Switch
+                      checked={reactionsEnabled}
+                      onCheckedChange={setReactionsEnabled}
+                    />
+                  </div>
+
+                  {/* Reaction Stats */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Reaction Stats
+                    </label>
+                    <Switch
+                      checked={reactionStatsEnabled}
+                      onCheckedChange={setReactionStatsEnabled}
+                    />
+                  </div>
+
+                  {/* Screenshots */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      Screenshots
+                    </label>
+                    <Switch
+                      checked={screenshotsEnabled}
+                      onCheckedChange={setScreenshotsEnabled}
+                    />
+                  </div>
+
+                  {/* QnA */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                    <label className="text-sm font-medium text-foreground cursor-pointer">
+                      QnA
+                    </label>
+                    <Switch
+                      checked={qnaEnabled}
+                      onCheckedChange={setQnaEnabled}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Moments Allowed */}
+              <div className="space-y-2.5">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Moments Configuration
+                </h3>
+                <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
+                  <label className="text-sm font-medium text-foreground">
+                    Moments Allowed
+                  </label>
+                  <Select value={momentsAllowed} onValueChange={setMomentsAllowed}>
+                    <SelectTrigger className="w-[120px] h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Reset Stream Button */}
+              <div className="pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 h-8 text-sm text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => setIsResetStreamDialogOpen(true)}
+                >
+                  <RotateCw className="w-4 h-4" />
+                  Reset Stream
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Stream Confirmation Dialog */}
+      <AlertDialog open={isResetStreamDialogOpen} onOpenChange={setIsResetStreamDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Stream</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the stream? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetStream}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Reset Stream
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

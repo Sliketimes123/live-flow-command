@@ -58,6 +58,8 @@ const Index = () => {
       blockedAt: "2:34 PM",
     },
   ]);
+  const qaCount = 24;
+  const reactionsCount = 156;
 
   // Simulate elapsed time
   useEffect(() => {
@@ -96,8 +98,8 @@ const Index = () => {
   };
 
   const handleStartRecording = () => {
-    setIsRecording(true);
-    console.log("Recording started");
+    setIsRecording(!isRecording);
+    console.log(isRecording ? "Recording stopped" : "Recording started");
   };
 
   const handleEndEvent = () => {
@@ -164,6 +166,7 @@ const Index = () => {
   const filteredMessages = isModerationStopped
     ? messages.filter((msg) => messagesBeforeStop.has(msg.id))
     : messages;
+  const chatMessageCount = messages.length;
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -234,6 +237,9 @@ const Index = () => {
         onDeleteMessage={handleDeleteMessage}
         viewType={viewType}
         activeSource={activeSource}
+        chatMessageCount={chatMessageCount}
+        qaCount={qaCount}
+        reactionsCount={reactionsCount}
       />
     </div>
   );

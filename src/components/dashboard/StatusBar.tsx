@@ -1,4 +1,4 @@
-import { Activity, Cpu, Ban, Star, Trash2, Search } from "lucide-react";
+import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, HelpCircle, Heart, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +36,9 @@ interface StatusBarProps {
   onDeleteMessage?: (messageId: string) => void;
   viewType?: "input" | "output";
   activeSource?: string;
+  chatMessageCount?: number;
+  qaCount?: number;
+  reactionsCount?: number;
 }
 
 export function StatusBar({
@@ -51,9 +54,13 @@ export function StatusBar({
   onDeleteMessage,
   viewType = "input",
   activeSource = "Camera-1",
+  chatMessageCount,
+  qaCount = 0,
+  reactionsCount = 0,
 }: StatusBarProps) {
   const [isBlockUserDialogOpen, setIsBlockUserDialogOpen] = useState(false);
   const [isSelectedChatDialogOpen, setIsSelectedChatDialogOpen] = useState(false);
+  const [isActiveUsersDialogOpen, setIsActiveUsersDialogOpen] = useState(false);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,6 +135,8 @@ export function StatusBar({
   const selectedMessages = useMemo(() => {
     return messages.filter((msg) => msg.isSelected);
   }, [messages]);
+
+  const totalChatMessages = chatMessageCount ?? messages.length;
 
   // Mock data for Input and Output
   const inputData = {
@@ -240,6 +249,97 @@ export function StatusBar({
             </div>
             <div className="mt-4 flex justify-end border-t pt-4">
               <Button onClick={() => setIsSelectedChatDialogOpen(false)}>Apply</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Chat Messages Summary */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1 h-7 text-xs px-2 font-semibold text-foreground"
+          title="Total chat messages"
+          disabled
+        >
+          <MessageSquare className="w-3 h-3" />
+          Chat Messages
+          <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full">
+            {totalChatMessages}
+          </span>
+        </Button>
+
+        {/* Q&A Summary */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1 h-7 text-xs px-2 font-semibold text-foreground"
+          title="Total Q&A items"
+          disabled
+        >
+          <HelpCircle className="w-3 h-3" />
+          Q&A
+          <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full">
+            {qaCount}
+          </span>
+        </Button>
+
+        {/* Reactions Summary */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1 h-7 text-xs px-2 font-semibold text-foreground"
+          title="Total reactions"
+          disabled
+        >
+          <Heart className="w-3 h-3" />
+          Reactions
+          <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full">
+            {reactionsCount}
+          </span>
+        </Button>
+
+        {/* Active Users Button */}
+        <Dialog open={isActiveUsersDialogOpen} onOpenChange={setIsActiveUsersDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
+              <Users className="w-3 h-3" />
+              Active Users
+              <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
+                3
+              </span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Active Users</DialogTitle>
+              <DialogDescription>
+                View all active users currently participating in the event.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 flex-1 flex flex-col min-h-0">
+              <ScrollArea className="flex-1 w-full rounded-md border">
+                <div className="space-y-2 p-2.5">
+                  {["Moderator_Alpha", "Moderator_Beta", "Moderator_Gamma"].map((mod, index) => (
+                    <div key={mod} className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-primary">
+                          {mod.charAt(mod.indexOf("_") + 1)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground">{mod}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {15 + index * 5} actions today
+                        </p>
+                      </div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-glow flex-shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+            <div className="mt-4 flex justify-end border-t pt-4">
+              <Button onClick={() => setIsActiveUsersDialogOpen(false)}>Close</Button>
             </div>
           </DialogContent>
         </Dialog>

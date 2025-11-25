@@ -56,13 +56,37 @@ export function ChatModeration({
   onDeleteMessage,
 }: ChatModerationProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [studioSearchQuery, setStudioSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [studioViewMode, setStudioViewMode] = useState<"list" | "grid">("list");
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [privateChats, setPrivateChats] = useState<PrivateChat[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Separate state for Studio Chat messages
+  const [studioMessages, setStudioMessages] = useState<ChatMessage[]>([
+    {
+      id: "studio-1",
+      username: "StudioUser1",
+      message: "Welcome to the studio chat!",
+      timestamp: "2:40 PM",
+      isHighlighted: false,
+      isHidden: false,
+      isSelected: false,
+    },
+    {
+      id: "studio-2",
+      username: "StudioUser2",
+      message: "This is a separate studio chat channel.",
+      timestamp: "2:41 PM",
+      isHighlighted: false,
+      isHidden: false,
+      isSelected: false,
+    },
+  ]);
 
   const isUserBlocked = (username: string) => {
     return blockedUsers.some((user) => user.username === username);
@@ -87,6 +111,30 @@ export function ChatModeration({
     onToggleSelect?.(messageId);
   };
 
+  const handleStudioToggleHide = (messageId: string) => {
+    setStudioMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, isHidden: !msg.isHidden } : msg
+      )
+    );
+  };
+
+  const handleStudioToggleSelect = (messageId: string) => {
+    setStudioMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, isSelected: !msg.isSelected } : msg
+      )
+    );
+  };
+
+  const handleStudioDeleteMessage = (messageId: string) => {
+    setStudioMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    toast({
+      title: "Deleted",
+      description: "Message deleted from studio chat",
+    });
+  };
+
   const filteredMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return messages
@@ -105,6 +153,25 @@ export function ChatModeration({
         return 0;
       });
   }, [messages, searchQuery]);
+
+  const filteredStudioMessages = useMemo(() => {
+    const query = studioSearchQuery.trim().toLowerCase();
+    return studioMessages
+      .filter((msg) => !msg.isHidden)
+      .filter((msg) => {
+        if (!query) return true;
+        return (
+          msg.username.toLowerCase().includes(query) ||
+          msg.message.toLowerCase().includes(query) ||
+          msg.timestamp.toLowerCase().includes(query)
+        );
+      })
+      .sort((a, b) => {
+        if (a.isSelected && !b.isSelected) return -1;
+        if (!a.isSelected && b.isSelected) return 1;
+        return 0;
+      });
+  }, [studioMessages, studioSearchQuery]);
 
   const handleStartPrivateChat = (username: string) => {
     const existingChat = privateChats.find((chat) => chat.username === username);
@@ -158,10 +225,11 @@ export function ChatModeration({
       <Tabs defaultValue="comments" className="flex-1 flex flex-col">
         <TabsList className="w-full h-6 p-0.5">
           <TabsTrigger value="comments" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Comments</TabsTrigger>
+          <TabsTrigger value="studio" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Studio Chat</TabsTrigger>
           <TabsTrigger value="private" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Private Chats</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="comments" className="flex-1 flex flex-col mt-2 space-y-2">
+        <TabsContent value="comments" className="flex-1 flex flex-col mt-2 space-y-2 data-[state=inactive]:hidden">
           {/* Search Bar & View Toggle */}
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <div className="relative flex-1">
@@ -302,7 +370,148 @@ export function ChatModeration({
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="private" className="flex-1 flex flex-col mt-2">
+        <TabsContent value="studio" className="flex-1 flex flex-col mt-2 space-y-2 data-[state=inactive]:hidden">
+          {/* Search Bar & View Toggle */}
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search messages..."
+                value={studioSearchQuery}
+                onChange={(e) => setStudioSearchQuery(e.target.value)}
+                className="pl-8 h-7 text-xs"
+              />
+            </div>
+            <div className="inline-flex items-center rounded border border-border bg-muted/30 p-0.5">
+              <Button
+                size="sm"
+                variant={studioViewMode === "list" ? "default" : "ghost"}
+                className="h-6 w-6 p-0"
+                onClick={() => setStudioViewMode("list")}
+                aria-pressed={studioViewMode === "list"}
+                title="List view"
+              >
+                <List className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant={studioViewMode === "grid" ? "default" : "ghost"}
+                className="h-6 w-6 p-0"
+                onClick={() => setStudioViewMode("grid")}
+                aria-pressed={studioViewMode === "grid"}
+                title="Grid view"
+              >
+                <Grid2X2 className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Chat Feed */}
+          <ScrollArea className="flex-1 pr-2">
+            <div
+              className={
+                studioViewMode === "grid"
+                  ? "grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+                  : "space-y-2"
+              }
+            >
+              {filteredStudioMessages.map((msg) => {
+                const blocked = isUserBlocked(msg.username);
+                return (
+                  <div
+                    key={msg.id}
+                    className={`group p-2.5 rounded-lg surface-elevated border border-border hover:border-primary/60 transition-all ${
+                      msg.isHighlighted ? "bg-primary/10 border-primary/30" : ""
+                    } ${blocked ? "opacity-50" : ""} ${msg.isSelected ? "border-primary/50 bg-primary/5" : ""}`}
+                  >
+                    <div
+                      className={`flex flex-col gap-1.5 ${
+                        studioViewMode === "grid" ? "min-h-[120px]" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center flex-wrap gap-1.5 text-xs">
+                            {msg.isSelected && (
+                              <Star className="w-3 h-3 text-primary fill-primary" />
+                            )}
+                            <span className="font-semibold text-foreground text-xs">
+                              {msg.username}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground tracking-wide">
+                              {msg.timestamp}
+                            </span>
+                            {msg.isHighlighted && (
+                              <Star className="w-3 h-3 text-primary fill-primary" />
+                            )}
+                            {blocked && (
+                              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            {msg.message}
+                          </p>
+                        </div>
+                        {/* Action Icons */}
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handleStudioToggleHide(msg.id)}
+                            title="Hide"
+                          >
+                            <EyeOff className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handleStudioToggleSelect(msg.id)}
+                            title={msg.isSelected ? "Unselect" : "Select"}
+                          >
+                            <Star
+                              className={`w-3 h-3 ${msg.isSelected ? "text-primary fill-primary" : ""}`}
+                            />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handleCopy(msg.id, msg.message)}
+                            title="Copy"
+                          >
+                            {copiedMessageId === msg.id ? (
+                              <Check className="w-3 h-3 text-primary" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-destructive"
+                            onClick={() => handleStudioDeleteMessage(msg.id)}
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {filteredStudioMessages.length === 0 && (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  No messages found.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="private" className="flex-1 flex flex-col mt-2 data-[state=inactive]:hidden">
           <div className="flex gap-4 h-full">
             {/* User List */}
             <div className="w-1/3 border-r border-border pr-4">

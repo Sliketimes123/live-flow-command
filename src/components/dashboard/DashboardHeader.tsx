@@ -86,28 +86,33 @@ export function DashboardHeader({
           <Button
             onClick={onStopModeration}
             size="sm"
-            variant={isModerationStopped ? "destructive" : "outline"}
-            className="gap-1 h-7 text-xs px-2"
+            variant={isModerationStopped ? "default" : "destructive"}
+            className={`gap-1 h-7 text-xs px-2 ${
+              isModerationStopped ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
+            }`}
           >
             <ShieldOff className="w-3 h-3" />
-            {isModerationStopped ? "Resume Moderation" : "Stop Moderation"}
+            {isModerationStopped ? "Start Moderation" : "Stop Moderation"}
           </Button>
           <Button
             onClick={onStartRecording}
             size="sm"
-            variant={isRecording ? "default" : "outline"}
+            variant={isRecording ? "destructive" : "outline"}
             className="gap-1 h-7 text-xs px-2"
             disabled={!isLive}
           >
             <Circle className="w-3 h-3" />
-            START REC
+            {isRecording ? "STOP REC" : "START REC"}
           </Button>
-          {isLive && (
-            <Button onClick={onStop} size="sm" variant="destructive" className="gap-1 h-7 text-xs px-2">
-              <Square className="w-3 h-3" />
-              STOP LIVE
-            </Button>
-          )}
+          <Button
+            onClick={isLive ? onStop : onStart}
+            size="sm"
+            variant={isLive ? "destructive" : "outline"}
+            className="gap-1 h-7 text-xs px-2"
+          >
+            <Square className="w-3 h-3" />
+            {isLive ? "STOP LIVE" : "START LIVE"}
+          </Button>
           <Button onClick={onEndEvent} size="sm" variant="destructive" className="gap-1 h-7 text-xs px-2">
             END EVENT
           </Button>

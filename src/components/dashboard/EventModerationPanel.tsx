@@ -34,7 +34,7 @@ export function EventModerationPanel({
         <TabsList className="w-full">
           <TabsTrigger value="chat">Chats</TabsTrigger>
           <TabsTrigger value="qa">Q&A Panel</TabsTrigger>
-          <TabsTrigger value="summary">Event Summary</TabsTrigger>
+          <TabsTrigger value="summary">Live Event Overview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chat" className="flex-1 mt-2">

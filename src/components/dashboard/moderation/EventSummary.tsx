@@ -1,44 +1,58 @@
 import { Card } from "@/components/ui/card";
-import { Eye, MessageSquare, Users, TrendingUp } from "lucide-react";
+import { Eye, MessageSquare, Users, HelpCircle, Heart, Ban } from "lucide-react";
 
 export function EventSummary() {
   const metrics = [
     {
-      label: "Total Views",
-      value: "2,547",
+      label: "Total Users",
+      value: "47",
       icon: Eye,
       change: "+12%",
       positive: true,
     },
     {
       label: "Chat Messages",
-      value: "1,234",
+      value: "89",
       icon: MessageSquare,
       change: "+8%",
       positive: true,
     },
     {
-      label: "Active Viewers",
-      value: "432",
+      label: "Average Concurrent Users",
+      value: "12",
       icon: Users,
       change: "+5%",
       positive: true,
     },
     {
-      label: "Engagement Rate",
-      value: "68%",
-      icon: TrendingUp,
-      change: "+3%",
+      label: "Blocked Users",
+      value: "3",
+      icon: Ban,
+      change: "+2",
+      positive: false,
+    },
+    {
+      label: "Q&A",
+      value: "24",
+      icon: HelpCircle,
+      change: "+8%",
+      positive: true,
+    },
+    {
+      label: "Reactions",
+      value: "156",
+      icon: Heart,
+      change: "+15%",
       positive: true,
     },
   ];
 
   const moderationStats = [
     { label: "Messages Deleted", value: "23" },
-    { label: "Users Timed Out", value: "5" },
-    { label: "Users Banned", value: "2" },
-    { label: "Questions Approved", value: "18" },
-    { label: "Highlights Marked", value: "7" },
+    { label: "Selected Chats", value: "5" },
+    { label: "Queued Questions", value: "2" },
+    { label: "Selected Questions", value: "18" },
+    { label: "Skipped Questions", value: "7" },
   ];
 
   return (
@@ -87,10 +101,10 @@ export function EventSummary() {
         </Card>
       </div>
 
-      {/* Active Moderators */}
+      {/* Active Users */}
       <div className="space-y-1.5">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Active Moderators
+          Active Users
         </h3>
         <Card className="p-2 surface-elevated border-border">
           <div className="space-y-2">

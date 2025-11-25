@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Copy, Check, Ban, X, ChevronDown, User, Eye, EyeOff } from "lucide-react";
+import { Search, Copy, Check, Ban, X, ChevronDown, User } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { BlockedUser } from "./ChatModeration";
@@ -144,7 +144,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
     );
     toast({
       title: "Question Skipped",
-      description: "Question moved to Closed tab",
+      description: "Question moved to Skipped tab",
     });
   };
 
@@ -267,7 +267,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
         <TabsList className="w-full h-6 p-0.5 mb-0">
           <TabsTrigger value="queue" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Queue</TabsTrigger>
           <TabsTrigger value="selected" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Selected</TabsTrigger>
-          <TabsTrigger value="closed" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Closed</TabsTrigger>
+          <TabsTrigger value="closed" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Skipped</TabsTrigger>
         </TabsList>
 
         <TabsContent value="queue" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden">
@@ -328,7 +328,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
                   <SelectedQuestionCard
                     key={q.id}
                     question={q}
-                    onShowHide={handleShowHide}
+                    onQueue={handleQueueQuestion}
                     onSkip={handleSkipQuestion}
                     onAssign={handleAssignClick}
                     onCopy={handleCopy}
@@ -377,7 +377,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
                 ))
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-4">
-                  No closed questions.
+                  No skipped questions.
                 </p>
               )}
             </div>
@@ -498,19 +498,31 @@ function QueueQuestionCard({
           </div>
           <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0"
-          onClick={() => onCopy(question.id, question.question)}
-          title="Copy"
-        >
-          {copiedQuestionId === question.id ? (
-            <Check className="w-3 h-3 text-primary" />
-          ) : (
-            <Copy className="w-3 h-3" />
-          )}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={() => onCopy(question.id, question.question)}
+            title="Copy"
+          >
+            {copiedQuestionId === question.id ? (
+              <Check className="w-3 h-3 text-primary" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-destructive"
+            onClick={() => onBlockUser(question.username)}
+            title="Block user"
+            disabled={blocked}
+          >
+            <Ban className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -545,7 +557,7 @@ function QueueQuestionCard({
 
 function SelectedQuestionCard({
   question,
-  onShowHide,
+  onQueue,
   onSkip,
   onAssign,
   onCopy,
@@ -554,7 +566,7 @@ function SelectedQuestionCard({
   isUserBlocked,
 }: {
   question: Question;
-  onShowHide: (id: string) => void;
+  onQueue: (id: string) => void;
   onSkip: (id: string) => void;
   onAssign: (id: string) => void;
   onCopy: (questionId: string, question: string) => void;
@@ -582,38 +594,40 @@ function SelectedQuestionCard({
           </div>
           <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0"
-          onClick={() => onCopy(question.id, question.question)}
-          title="Copy"
-        >
-          {copiedQuestionId === question.id ? (
-            <Check className="w-3 h-3 text-primary" />
-          ) : (
-            <Copy className="w-3 h-3" />
-          )}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={() => onCopy(question.id, question.question)}
+            title="Copy"
+          >
+            {copiedQuestionId === question.id ? (
+              <Check className="w-3 h-3 text-primary" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-destructive"
+            onClick={() => onBlockUser(question.username)}
+            title="Block user"
+            disabled={blocked}
+          >
+            <Ban className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1 gap-1"
-          onClick={() => onShowHide(question.id)}
+          className="h-7 text-xs flex-1"
+          onClick={() => onQueue(question.id)}
         >
-          {question.isHidden ? (
-            <>
-              <Eye className="w-3 h-3" />
-              Show
-            </>
-          ) : (
-            <>
-              <EyeOff className="w-3 h-3" />
-              Hide
-            </>
-          )}
+          Queue
         </Button>
         <Button
           size="sm"
@@ -676,19 +690,31 @@ function ClosedQuestionCard({
           </div>
           <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0"
-          onClick={() => onCopy(question.id, question.question)}
-          title="Copy"
-        >
-          {copiedQuestionId === question.id ? (
-            <Check className="w-3 h-3 text-primary" />
-          ) : (
-            <Copy className="w-3 h-3" />
-          )}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={() => onCopy(question.id, question.question)}
+            title="Copy"
+          >
+            {copiedQuestionId === question.id ? (
+              <Check className="w-3 h-3 text-primary" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-destructive"
+            onClick={() => onBlockUser(question.username)}
+            title="Block user"
+            disabled={blocked}
+          >
+            <Ban className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Button

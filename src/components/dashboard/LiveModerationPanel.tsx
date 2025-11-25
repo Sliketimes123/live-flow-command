@@ -10,6 +10,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -39,7 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Info, Clock, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus } from "lucide-react";
+import { FileText, Info, Clock, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus, Play } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -96,6 +97,7 @@ export function LiveModerationPanel({
   const [momentsAllowed, setMomentsAllowed] = useState<string>("no");
   const [eventId] = useState<string>("npn57jcgzzo"); // Event ID
   const [isResetStreamDialogOpen, setIsResetStreamDialogOpen] = useState(false);
+  const [autoPublish, setAutoPublish] = useState(false);
   
   // Settings toggles
   const [commentsEnabled, setCommentsEnabled] = useState(true);
@@ -291,16 +293,11 @@ export function LiveModerationPanel({
         </Tabs>
 
         {/* Live Player Preview */}
-        <div className="relative aspect-video bg-muted rounded-xl overflow-hidden border border-border shadow-lg">
-          {/* Health Indicator Bar */}
-          <div className={`absolute top-0 left-0 right-0 h-1 ${healthColor[publishingHealth]}`} />
-
+        <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-lg">
           {/* Placeholder Video */}
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+          <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
-              <Play className="w-12 h-12 mx-auto mb-1 opacity-50" />
-              <p className="text-xs">Live Feed Preview</p>
-              <p className="text-[10px] opacity-70 mt-0.5">{activeSource}</p>
+              <Play className="w-16 h-16 mx-auto text-white" fill="white" />
             </div>
           </div>
 
@@ -608,84 +605,83 @@ export function LiveModerationPanel({
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Ingestion Details Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Ingestion Details
-                </h3>
-
-                {/* Primary RTMP URL */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Primary RTMP</label>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      value={rtmpUrl}
-                      readOnly
-                      className="flex-1 h-8 text-xs font-mono"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
-                      title="Copy RTMP URL"
-                    >
-                      {copiedField === "RTMP URL" ? (
-                        <Check className="w-3 h-3 text-primary" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Stream Key (Password) */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Stream Key</label>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      type={showStreamKey ? "text" : "password"}
-                      value={streamKey}
-                      readOnly
-                      className="flex-1 h-8 text-xs font-mono"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setShowStreamKey(!showStreamKey)}
-                      title={showStreamKey ? "Hide Stream Key" : "Show Stream Key"}
-                    >
-                      {showStreamKey ? (
-                        <EyeOff className="w-3 h-3" />
-                      ) : (
-                        <Eye className="w-3 h-3" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleCopy(streamKey, "Stream Key")}
-                      title="Copy Stream Key"
-                    >
-                      {copiedField === "Stream Key" ? (
-                        <Check className="w-3 h-3 text-primary" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </Button>
-                  </div>
                 </div>
               </div>
-            </div>
 
-              {/* Right Side - Live Channels and Social Publish */}
+              {/* Right Side - Ingestion Details, Live Channels and Social Publish */}
               <div className="flex-1 max-w-[50%] flex flex-col min-h-0">
                 <ScrollArea className="flex-1 w-full">
                   <div className="space-y-6 pr-6">
+                    {/* Ingestion Details Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                        Ingestion Details
+                      </h3>
+
+                      {/* Primary RTMP URL */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-foreground">Primary RTMP</label>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            value={rtmpUrl}
+                            readOnly
+                            className="flex-1 h-8 text-xs font-mono"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
+                            title="Copy RTMP URL"
+                          >
+                            {copiedField === "RTMP URL" ? (
+                              <Check className="w-3 h-3 text-primary" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Stream Key (Password) */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-foreground">Stream Key</label>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type={showStreamKey ? "text" : "password"}
+                            value={streamKey}
+                            readOnly
+                            className="flex-1 h-8 text-xs font-mono"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setShowStreamKey(!showStreamKey)}
+                            title={showStreamKey ? "Hide Stream Key" : "Show Stream Key"}
+                          >
+                            {showStreamKey ? (
+                              <EyeOff className="w-3 h-3" />
+                            ) : (
+                              <Eye className="w-3 h-3" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleCopy(streamKey, "Stream Key")}
+                            title="Copy Stream Key"
+                          >
+                            {copiedField === "Stream Key" ? (
+                              <Check className="w-3 h-3 text-primary" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                     {/* LIVE CHANNELS Section */}
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
@@ -730,6 +726,22 @@ export function LiveModerationPanel({
                           No social destinations added yet
                         </div>
                       </div>
+                    </div>
+
+                    {/* AUTO PUBLISH Section */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-border">
+                      <Checkbox
+                        id="auto-publish"
+                        checked={autoPublish}
+                        onCheckedChange={(checked) => setAutoPublish(checked === true)}
+                        className="rounded-none h-4 w-4"
+                      />
+                      <label
+                        htmlFor="auto-publish"
+                        className="text-sm font-medium text-foreground cursor-pointer"
+                      >
+                        Auto Publish
+                      </label>
                     </div>
                   </div>
                 </ScrollArea>
@@ -901,8 +913,10 @@ export function LiveModerationPanel({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
                       <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="client-only">Client Only</SelectItem>
+                      <SelectItem value="admin-only">Admin Only</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

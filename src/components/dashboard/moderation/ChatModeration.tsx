@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Star, EyeOff, Copy, Check, List, Grid2X2, Trash2, Send, User } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Search, Star, EyeOff, Copy, Check, Trash2, Send, User } from "lucide-react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export interface ChatMessage {
@@ -32,6 +32,9 @@ interface ChatModerationProps {
   onToggleSelect?: (messageId: string) => void;
   onCopy?: (message: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  activeTab?: "comments" | "studio" | "private";
+  autoScroll?: boolean;
+  onAutoScrollChange?: (enabled: boolean) => void;
 }
 
 interface PrivateChat {
@@ -54,17 +57,68 @@ export function ChatModeration({
   onToggleSelect,
   onCopy,
   onDeleteMessage,
+  activeTab = "comments",
+  autoScroll: propAutoScroll,
+  onAutoScrollChange,
 }: ChatModerationProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [studioSearchQuery, setStudioSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [studioViewMode, setStudioViewMode] = useState<"list" | "grid">("list");
+  // Fallback to internal state if props not provided (for backward compatibility)
+  // Default to disabled (false)
+  const [internalAutoScroll, setInternalAutoScroll] = useState(false);
+  const [internalStudioAutoScroll, setInternalStudioAutoScroll] = useState(false);
+  
+  // Use prop if provided for the active tab, otherwise fall back to internal state
+  const autoScroll = activeTab === "comments" && propAutoScroll !== undefined 
+    ? propAutoScroll 
+    : internalAutoScroll;
+  const studioAutoScroll = activeTab === "studio" && propAutoScroll !== undefined
+    ? propAutoScroll
+    : internalStudioAutoScroll;
+  
+  const handleAutoScrollChange = (value: boolean) => {
+    if (onAutoScrollChange) {
+      onAutoScrollChange(value);
+    } else {
+      // Fallback to internal state
+      if (activeTab === "comments") {
+        setInternalAutoScroll(value);
+      } else {
+        setInternalStudioAutoScroll(value);
+      }
+    }
+  };
+  
+  const handleStudioAutoScrollChange = (value: boolean) => {
+    if (onAutoScrollChange) {
+      onAutoScrollChange(value);
+    } else {
+      setInternalStudioAutoScroll(value);
+    }
+  };
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [privateChats, setPrivateChats] = useState<PrivateChat[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const commentsScrollRef = useRef<HTMLDivElement>(null);
+  const studioScrollRef = useRef<HTMLDivElement>(null);
+  const prevActiveTabRef = useRef<string | undefined>(activeTab);
   const { toast } = useToast();
+
+  const scrollToBottom = (ref: React.RefObject<HTMLDivElement>) => {
+    if (ref.current) {
+      // Find the ScrollArea viewport by traversing up from the content div
+      const scrollAreaRoot = ref.current.closest('[data-radix-scroll-area-root]');
+      if (scrollAreaRoot) {
+        const viewport = scrollAreaRoot.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+        if (viewport) {
+          // Use scrollTop for immediate scroll (better for auto-scroll)
+          viewport.scrollTop = viewport.scrollHeight;
+        }
+      }
+    }
+  };
 
   // Separate state for Studio Chat messages
   const [studioMessages, setStudioMessages] = useState<ChatMessage[]>([
@@ -220,17 +274,59 @@ export function ChatModeration({
     return Array.from(users);
   }, [messages]);
 
-  return (
-    <div className="flex flex-col h-full">
-      <Tabs defaultValue="comments" className="flex-1 flex flex-col">
-        <TabsList className="w-full h-6 p-0.5">
-          <TabsTrigger value="comments" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Comments</TabsTrigger>
-          <TabsTrigger value="studio" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Studio Chat</TabsTrigger>
-          <TabsTrigger value="private" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Private Chats</TabsTrigger>
-        </TabsList>
+  // Auto scroll for Comments tab - only when Comments tab is active
+  useEffect(() => {
+    if (activeTab === "comments" && autoScroll && filteredMessages.length > 0) {
+      // Use requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          // Double-check tab is still active before scrolling
+          if (activeTab === "comments" && autoScroll) {
+            scrollToBottom(commentsScrollRef);
+          }
+        }, 50);
+      });
+    }
+  }, [filteredMessages.length, autoScroll, activeTab]);
 
-        <TabsContent value="comments" className="flex-1 flex flex-col mt-2 space-y-2 data-[state=inactive]:hidden">
-          {/* Search Bar & View Toggle */}
+  // Auto scroll for Studio Chat tab - only when Studio Chat tab is active
+  useEffect(() => {
+    if (activeTab === "studio" && studioAutoScroll && filteredStudioMessages.length > 0) {
+      // Use requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          // Double-check tab is still active before scrolling
+          if (activeTab === "studio" && studioAutoScroll) {
+            scrollToBottom(studioScrollRef);
+          }
+        }, 50);
+      });
+    }
+  }, [filteredStudioMessages.length, studioAutoScroll, activeTab]);
+
+  // Scroll to bottom when switching to Comments tab if auto-scroll is enabled
+  useEffect(() => {
+    const prevTab = prevActiveTabRef.current;
+    prevActiveTabRef.current = activeTab;
+    
+    if (activeTab === "comments" && prevTab !== "comments" && autoScroll && filteredMessages.length > 0) {
+      setTimeout(() => scrollToBottom(commentsScrollRef), 100);
+    }
+  }, [activeTab, autoScroll, filteredMessages.length]);
+
+  // Scroll to bottom when switching to Studio Chat tab if auto-scroll is enabled
+  useEffect(() => {
+    const prevTab = prevActiveTabRef.current;
+    
+    if (activeTab === "studio" && prevTab !== "studio" && studioAutoScroll && filteredStudioMessages.length > 0) {
+      setTimeout(() => scrollToBottom(studioScrollRef), 100);
+    }
+  }, [activeTab, studioAutoScroll, filteredStudioMessages.length]);
+
+  // Comments Tab Content
+  const renderCommentsContent = () => (
+    <div className="flex-1 flex flex-col space-y-2">
+          {/* Search Bar & Auto Scroll Toggle */}
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -241,39 +337,39 @@ export function ChatModeration({
                 className="pl-8 h-7 text-xs"
               />
             </div>
-            <div className="inline-flex items-center rounded border border-border bg-muted/30 p-0.5">
-              <Button
-                size="sm"
-                variant={viewMode === "list" ? "default" : "ghost"}
-                className="h-6 w-6 p-0"
-                onClick={() => setViewMode("list")}
-                aria-pressed={viewMode === "list"}
-                title="List view"
-              >
-                <List className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                className="h-6 w-6 p-0"
-                onClick={() => setViewMode("grid")}
-                aria-pressed={viewMode === "grid"}
-                title="Grid view"
-              >
-                <Grid2X2 className="w-3 h-3" />
-              </Button>
-            </div>
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={autoScroll ? "default" : "outline"}
+                    className="h-7 w-7 p-0"
+                    onClick={() => {
+                      const newAutoScroll = !autoScroll;
+                      handleAutoScrollChange(newAutoScroll);
+                      if (newAutoScroll) {
+                        // Immediately scroll to bottom when enabling
+                        setTimeout(() => scrollToBottom(commentsScrollRef), 100);
+                      }
+                    }}
+                  >
+                    <img 
+                      src="/auto-scroll-icon.svg" 
+                      alt="Auto scroll" 
+                      className="w-3 h-3"
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{autoScroll ? "Auto scroll enabled" : "Auto scroll disabled"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Chat Feed */}
           <ScrollArea className="flex-1 pr-2">
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
-                  : "space-y-2"
-              }
-            >
+            <div ref={commentsScrollRef} className="space-y-2">
               {filteredMessages.map((msg) => {
                 const blocked = isUserBlocked(msg.username);
                 return (
@@ -283,11 +379,7 @@ export function ChatModeration({
                       msg.isHighlighted ? "bg-primary/10 border-primary/30" : ""
                     } ${blocked ? "opacity-50" : ""} ${msg.isSelected ? "border-primary/50 bg-primary/5" : ""}`}
                   >
-                    <div
-                      className={`flex flex-col gap-1.5 ${
-                        viewMode === "grid" ? "min-h-[120px]" : ""
-                      }`}
-                    >
+                    <div className="flex flex-col gap-1.5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center flex-wrap gap-1.5 text-xs">
@@ -368,10 +460,13 @@ export function ChatModeration({
               )}
             </div>
           </ScrollArea>
-        </TabsContent>
+    </div>
+  );
 
-        <TabsContent value="studio" className="flex-1 flex flex-col mt-2 space-y-2 data-[state=inactive]:hidden">
-          {/* Search Bar & View Toggle */}
+  // Studio Chat Tab Content
+  const renderStudioChatContent = () => (
+    <div className="flex-1 flex flex-col space-y-2">
+          {/* Search Bar & Auto Scroll Toggle */}
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -382,39 +477,39 @@ export function ChatModeration({
                 className="pl-8 h-7 text-xs"
               />
             </div>
-            <div className="inline-flex items-center rounded border border-border bg-muted/30 p-0.5">
-              <Button
-                size="sm"
-                variant={studioViewMode === "list" ? "default" : "ghost"}
-                className="h-6 w-6 p-0"
-                onClick={() => setStudioViewMode("list")}
-                aria-pressed={studioViewMode === "list"}
-                title="List view"
-              >
-                <List className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant={studioViewMode === "grid" ? "default" : "ghost"}
-                className="h-6 w-6 p-0"
-                onClick={() => setStudioViewMode("grid")}
-                aria-pressed={studioViewMode === "grid"}
-                title="Grid view"
-              >
-                <Grid2X2 className="w-3 h-3" />
-              </Button>
-            </div>
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={studioAutoScroll ? "default" : "outline"}
+                    className="h-7 w-7 p-0"
+                    onClick={() => {
+                      const newStudioAutoScroll = !studioAutoScroll;
+                      handleStudioAutoScrollChange(newStudioAutoScroll);
+                      if (newStudioAutoScroll) {
+                        // Immediately scroll to bottom when enabling
+                        setTimeout(() => scrollToBottom(studioScrollRef), 100);
+                      }
+                    }}
+                  >
+                    <img 
+                      src="/auto-scroll-icon.svg" 
+                      alt="Auto scroll" 
+                      className="w-3 h-3"
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{studioAutoScroll ? "Auto scroll enabled" : "Auto scroll disabled"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Chat Feed */}
           <ScrollArea className="flex-1 pr-2">
-            <div
-              className={
-                studioViewMode === "grid"
-                  ? "grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
-                  : "space-y-2"
-              }
-            >
+            <div ref={studioScrollRef} className="space-y-2">
               {filteredStudioMessages.map((msg) => {
                 const blocked = isUserBlocked(msg.username);
                 return (
@@ -424,11 +519,7 @@ export function ChatModeration({
                       msg.isHighlighted ? "bg-primary/10 border-primary/30" : ""
                     } ${blocked ? "opacity-50" : ""} ${msg.isSelected ? "border-primary/50 bg-primary/5" : ""}`}
                   >
-                    <div
-                      className={`flex flex-col gap-1.5 ${
-                        studioViewMode === "grid" ? "min-h-[120px]" : ""
-                      }`}
-                    >
+                    <div className="flex flex-col gap-1.5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center flex-wrap gap-1.5 text-xs">
@@ -509,9 +600,12 @@ export function ChatModeration({
               )}
             </div>
           </ScrollArea>
-        </TabsContent>
+    </div>
+  );
 
-        <TabsContent value="private" className="flex-1 flex flex-col mt-2 data-[state=inactive]:hidden">
+  // Private Chats Tab Content
+  const renderPrivateChatsContent = () => (
+    <div className="flex-1 flex flex-col">
           <div className="flex gap-4 h-full">
             {/* User List */}
             <div className="w-1/3 border-r border-border pr-4">
@@ -610,8 +704,14 @@ export function ChatModeration({
               )}
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full">
+      {activeTab === "comments" && renderCommentsContent()}
+      {activeTab === "studio" && renderStudioChatContent()}
+      {activeTab === "private" && renderPrivateChatsContent()}
     </div>
   );
 }

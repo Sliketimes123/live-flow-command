@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Info, Clock, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus, Play } from "lucide-react";
+import { FileText, Info, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus, Play } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -86,10 +86,7 @@ export function LiveModerationPanel({
   streamKey = "npn57eigzo",
 }: LiveModerationPanelProps) {
   const [viewType, setViewType] = useState<"input" | "output">("input");
-  const [isEventLogsOpen, setIsEventLogsOpen] = useState(false);
-  const [isInfoSectionOpen, setIsInfoSectionOpen] = useState(false);
-  const [isMomentsOpen, setIsMomentsOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState<string>("event-health");
   const [showStreamKey, setShowStreamKey] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showPreviewTooltip, setShowPreviewTooltip] = useState(false);
@@ -111,12 +108,7 @@ export function LiveModerationPanel({
   
   const { toast } = useToast();
 
-  // Reset tooltip when Info Section dialog opens
-  useEffect(() => {
-    if (isInfoSectionOpen) {
-      setShowPreviewTooltip(false);
-    }
-  }, [isInfoSectionOpen]);
+
 
   // Mock screenshots data
   const screenshots: Screenshot[] = [
@@ -282,527 +274,406 @@ export function LiveModerationPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full">
-      <div>
-        {/* Input/Output Tabs */}
-        <Tabs value={viewType} onValueChange={(value) => handleViewTypeChange(value as "input" | "output")} className="mb-2">
-          <TabsList className="w-full">
-            <TabsTrigger value="input">Input</TabsTrigger>
-            <TabsTrigger value="output">Output</TabsTrigger>
+    <div className="flex flex-col h-full">
+      {/* Main Tabs - Event Health, Info Section, Settings */}
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="flex flex-col h-full">
+        {/* Fixed Section - Main Tabs */}
+        <div className="flex-shrink-0">
+          {/* Main Tabs List */}
+          <TabsList className="w-full mb-2">
+            <TabsTrigger value="event-health">Event Health</TabsTrigger>
+            <TabsTrigger value="info-section">Info Section</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
-        </Tabs>
 
-        {/* Live Player Preview */}
-        <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-lg">
-          {/* Placeholder Video */}
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <Play className="w-16 h-16 mx-auto text-white" fill="white" />
-            </div>
-          </div>
+          {/* Input/Output Tabs and Live Preview - Only visible for Event Health tab */}
+          {activeMainTab === "event-health" && (
+            <>
+              {/* Input/Output Tabs */}
+              <Tabs value={viewType} onValueChange={(value) => handleViewTypeChange(value as "input" | "output")} className="mb-2">
+                <TabsList className="w-full">
+                  <TabsTrigger value="input">Input</TabsTrigger>
+                  <TabsTrigger value="output">Output</TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-          {/* Live Badge */}
-          <div className="absolute top-2 right-2 px-2 py-0.5 bg-status-live backdrop-blur-sm rounded flex items-center gap-1 shadow-lg">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse-glow" />
-            <span className="text-white text-[10px] font-bold uppercase tracking-wide">LIVE</span>
-          </div>
-        </div>
-
-        {/* Event ID */}
-        <div className="mt-2 flex items-center justify-start">
-          <button
-            onClick={() => handleCopy(eventId, "Event ID")}
-            className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
-            title="Click to copy Event ID"
-          >
-            <img 
-              src="/slike_mini.svg" 
-              alt="Event ID Logo" 
-              className="w-4 h-4 flex-shrink-0"
-            />
-            <span className="font-mono text-xs">{eventId}</span>
-            {copiedField === "Event ID" ? (
-              <Check className="w-3 h-3 text-primary" />
-            ) : (
-              <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            )}
-          </button>
-        </div>
-
-        {/* Stream Health Information */}
-        <div className="mt-2 space-y-2">
-          {/* Input Stream Health */}
-          <div className="p-2 rounded-lg border border-border bg-card space-y-1.5">
-            <h4 className="text-xs font-semibold text-foreground mb-1.5">INPUT</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">STREAM HEALTH:</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${healthTextColor[inputData.streamHealth]}`}
-                >
-                  {healthText[inputData.streamHealth]}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">INPUT MODE:</span>
-                <span className="font-semibold text-foreground text-xs">{inputData.inputMode}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">BITRATE:</span>
-                <span className="font-semibold text-foreground text-xs">
-                  {inputData.bitrateCurrent} kbps (cur), {inputData.bitrateAverage} kbps (avg)
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">DIMENSION:</span>
-                <span className="font-semibold text-foreground text-xs">{inputData.dimension}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">FRAME RATE:</span>
-                <span className="font-semibold text-foreground text-xs">{inputData.frameRate} FPS</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Output Stream Health */}
-          <div className="p-2 rounded-lg border border-border bg-card space-y-1.5">
-            <h4 className="text-xs font-semibold text-foreground mb-1.5">OUTPUT</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">STREAM HEALTH:</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${healthTextColor[outputData.streamHealth]}`}
-                >
-                  {healthText[outputData.streamHealth]}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">Modes:</span>
-                <span className="font-semibold text-foreground text-xs">{outputData.modes}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">QUALITIES:</span>
-                <span className="font-semibold text-foreground text-xs">{outputData.qualities}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground font-medium text-[10px]">ENCRYPTED:</span>
-                <span className="font-semibold text-foreground text-xs">{outputData.encrypted}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Moderation Actions */}
-      <div className="space-y-1.5 mt-auto">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Quick Actions
-        </h3>
-        <div className="grid grid-cols-2 gap-1.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-1 h-7 text-xs"
-            onClick={() => setIsEventLogsOpen(true)}
-          >
-            <FileText className="w-3 h-3" />
-            Event Logs
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-1 h-7 text-xs"
-            onClick={() => setIsInfoSectionOpen(true)}
-          >
-            <Info className="w-3 h-3" />
-            Info Section
-          </Button>
-
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="gap-1 h-7 text-xs"
-            onClick={() => setIsMomentsOpen(true)}
-          >
-            <Clock className="w-3 h-3" />
-            Moments
-          </Button>
-
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="gap-1 h-7 text-xs"
-            onClick={() => setIsSettingsOpen(true)}
-          >
-            <Settings className="w-3 h-3" />
-            Settings
-          </Button>
-        </div>
-      </div>
-
-      {/* Event Logs Dialog */}
-      <Dialog open={isEventLogsOpen} onOpenChange={setIsEventLogsOpen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Event Logs</DialogTitle>
-            <DialogDescription>
-              View all event logs and system status information
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col min-h-0 mt-4">
-            {/* Status Bar */}
-            <div className="mb-4 p-2 rounded-lg border border-border bg-card">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-foreground">INPUT PRIMARY</span>
-                  <span className="text-xs text-muted-foreground">{bitrate} kb/s</span>
+              {/* Live Player Preview - Fixed */}
+              <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-lg">
+                {/* Placeholder Video */}
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Play className="w-16 h-16 mx-auto text-white" fill="white" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-xs font-medium text-green-600 dark:text-green-400">Healthy</span>
+
+                {/* Live Badge */}
+                <div className="absolute top-2 right-2 px-2 py-0.5 bg-status-live backdrop-blur-sm rounded flex items-center gap-1 shadow-lg">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse-glow" />
+                  <span className="text-white text-[10px] font-bold uppercase tracking-wide">LIVE</span>
                 </div>
               </div>
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Event Logs List */}
-            <ScrollArea className="flex-1">
-              <div className="space-y-2 pr-4">
-                {eventLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex items-start gap-3 p-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <span className="text-xs text-muted-foreground font-mono whitespace-nowrap mt-0.5">
-                      {log.timestamp}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-bold text-foreground">{log.category}</span>
-                        {log.description && (
-                          <span className="text-xs text-foreground/80">{log.description}</span>
-                        )}
+        {/* Main Tabs Content */}
+        {/* Event Health Tab */}
+        <TabsContent value="event-health" className="flex-1 flex flex-col min-h-0 mt-3 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-3 pr-2">
+              {/* Stream Health Information */}
+              <div className="space-y-2">
+                {/* Input Stream Health */}
+                <div className="p-2 rounded-lg border border-border bg-card space-y-1.5">
+                  <h4 className="text-xs font-semibold text-foreground mb-1.5">INPUT</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">STREAM HEALTH:</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${healthTextColor[inputData.streamHealth]}`}
+                      >
+                        {healthText[inputData.streamHealth]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">INPUT MODE:</span>
+                      <span className="font-semibold text-foreground text-xs">{inputData.inputMode}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">BITRATE:</span>
+                      <span className="font-semibold text-foreground text-xs">
+                        {inputData.bitrateCurrent} kbps (cur), {inputData.bitrateAverage} kbps (avg)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">DIMENSION:</span>
+                      <span className="font-semibold text-foreground text-xs">{inputData.dimension}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">FRAME RATE:</span>
+                      <span className="font-semibold text-foreground text-xs">{inputData.frameRate} FPS</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Output Stream Health */}
+                <div className="p-2 rounded-lg border border-border bg-card space-y-1.5">
+                  <h4 className="text-xs font-semibold text-foreground mb-1.5">OUTPUT</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">STREAM HEALTH:</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${healthTextColor[outputData.streamHealth]}`}
+                      >
+                        {healthText[outputData.streamHealth]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">Modes:</span>
+                      <span className="font-semibold text-foreground text-xs">{outputData.modes}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">QUALITIES:</span>
+                      <span className="font-semibold text-foreground text-xs">{outputData.qualities}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium text-[10px]">ENCRYPTED:</span>
+                      <span className="font-semibold text-foreground text-xs">{outputData.encrypted}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Logs Section */}
+              <div>
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">Event Logs</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    View all event logs and system status information
+                  </p>
+                </div>
+
+                {/* Status Bar */}
+                <div className="mb-3 p-2 rounded-lg border border-border bg-card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-foreground">INPUT PRIMARY</span>
+                      <span className="text-xs text-muted-foreground">{bitrate} kb/s</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Healthy</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Logs List */}
+                <div className="space-y-2">
+                  {eventLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-3 p-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <span className="text-xs text-muted-foreground font-mono whitespace-nowrap mt-0.5">
+                        {log.timestamp}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs font-bold text-foreground">{log.category}</span>
+                          {log.description && (
+                            <span className="text-xs text-foreground/80">{log.description}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </ScrollArea>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </div>
+          </ScrollArea>
+        </TabsContent>
 
-      {/* Info Section Dialog */}
-      <Dialog open={isInfoSectionOpen} onOpenChange={setIsInfoSectionOpen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Info Section</DialogTitle>
-            <DialogDescription>
-              View event details and ingestion information
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col min-h-0 mt-4 overflow-y-auto">
-            <div className="flex gap-6">
-              {/* Left Side - Event Details */}
-              <div className="flex-1 max-w-[50%]">
-                {/* Event Preview Section */}
-                <div className="mb-6">
-                {/* Thumbnail Preview */}
-                <div className="relative w-full max-w-2xl aspect-video rounded-lg border border-border bg-muted/30 mb-3 overflow-hidden">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-destructive mb-2">BREAKING</div>
-                      <div className="text-sm text-muted-foreground">Live Event Preview</div>
-                    </div>
+        {/* Info Section Tab */}
+        <TabsContent value="info-section" className="flex-1 flex flex-col min-h-0 mt-3 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-6 pr-2">
+              {/* Live Event Preview */}
+              <div className="relative w-full aspect-video rounded-lg border border-border bg-muted/30 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-destructive mb-2">BREAKING</div>
+                    <div className="text-sm text-muted-foreground">Live Event Preview</div>
                   </div>
                 </div>
+              </div>
 
-                {/* Event Title and Description */}
-                <div className="space-y-2 relative">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-base font-semibold text-foreground flex-1">{eventTitle}</h3>
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider delayDuration={300}>
-                        <Tooltip
-                          open={showPreviewTooltip}
-                          onOpenChange={setShowPreviewTooltip}
-                          delayDuration={300}
+              {/* Event Title and Description */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-semibold text-foreground flex-1">{eventTitle}</h3>
+                  <div className="flex items-center gap-1">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip
+                        open={showPreviewTooltip}
+                        onOpenChange={setShowPreviewTooltip}
+                        delayDuration={300}
+                      >
+                        <TooltipTrigger
+                          asChild
+                          onMouseEnter={() => setShowPreviewTooltip(true)}
+                          onMouseLeave={() => setShowPreviewTooltip(false)}
+                          onFocus={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.blur();
+                          }}
                         >
-                          <TooltipTrigger
-                            asChild
-                            onMouseEnter={() => setShowPreviewTooltip(true)}
-                            onMouseLeave={() => setShowPreviewTooltip(false)}
-                            onFocus={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.blur();
-                            }}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              onClick={handleOpenPreview}
-                              tabIndex={-1}
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Open to Preview</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0"
+                            onClick={handleOpenPreview}
+                            tabIndex={-1}
                           >
-                            <MoreVertical className="w-4 h-4" />
+                            <ExternalLink className="w-4 h-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={handleInvite}>
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Invite
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={handleCopyEventUrl}>
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy URL
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Open to Preview</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleInvite}>
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Invite
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleCopyEventUrl}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy URL
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{eventDescription}</p>
-                  
-                  {/* Date and Time with Event ID */}
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
-                    <div className="flex items-center gap-2">
-                      <span>{eventDate}</span>
-                      <span>•</span>
-                      <span>{eventTime}</span>
-                    </div>
-                    <button
-                      onClick={() => handleCopy(eventId, "Event ID")}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
-                      title="Click to copy Event ID"
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{eventDescription}</p>
+                
+                {/* Date and Time with Event ID */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
+                  <div className="flex items-center gap-2">
+                    <span>{eventDate}</span>
+                    <span>•</span>
+                    <span>{eventTime}</span>
+                  </div>
+                  <button
+                    onClick={() => handleCopy(eventId, "Event ID")}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
+                    title="Click to copy Event ID"
+                  >
+                    <img 
+                      src="/slike_mini.svg" 
+                      alt="Event ID Logo" 
+                      className="w-4 h-4 flex-shrink-0"
+                    />
+                    <span className="font-mono text-xs">{eventId}</span>
+                    {copiedField === "Event ID" ? (
+                      <Check className="w-3 h-3 text-primary" />
+                    ) : (
+                      <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Ingestion Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Ingestion Details
+                </h3>
+
+                {/* Primary RTMP URL */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">Primary RTMP</label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      value={rtmpUrl}
+                      readOnly
+                      className="flex-1 h-8 text-xs font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
+                      title="Copy RTMP URL"
                     >
-                      <img 
-                        src="/slike_mini.svg" 
-                        alt="Event ID Logo" 
-                        className="w-4 h-4 flex-shrink-0"
-                      />
-                      <span className="font-mono text-xs">{eventId}</span>
-                      {copiedField === "Event ID" ? (
+                      {copiedField === "RTMP URL" ? (
                         <Check className="w-3 h-3 text-primary" />
                       ) : (
-                        <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Copy className="w-3 h-3" />
                       )}
-                    </button>
+                    </Button>
                   </div>
                 </div>
+
+                {/* Stream Key */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">Stream Key</label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type={showStreamKey ? "text" : "password"}
+                      value={streamKey}
+                      readOnly
+                      className="flex-1 h-8 text-xs font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setShowStreamKey(!showStreamKey)}
+                      title={showStreamKey ? "Hide Stream Key" : "Show Stream Key"}
+                    >
+                      {showStreamKey ? (
+                        <EyeOff className="w-3 h-3" />
+                      ) : (
+                        <Eye className="w-3 h-3" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleCopy(streamKey, "Stream Key")}
+                      title="Copy Stream Key"
+                    >
+                      {copiedField === "Stream Key" ? (
+                        <Check className="w-3 h-3 text-primary" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* Right Side - Ingestion Details, Live Channels and Social Publish */}
-              <div className="flex-1 max-w-[50%] flex flex-col min-h-0">
-                <ScrollArea className="flex-1 w-full">
-                  <div className="space-y-6 pr-6">
-                    {/* Ingestion Details Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                        Ingestion Details
-                      </h3>
+              {/* Live Channels Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Live Channels
+                </h3>
+                <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="SELECT LIVE CHANNEL" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="channel1">Channel 1</SelectItem>
+                    <SelectItem value="channel2">Channel 2</SelectItem>
+                    <SelectItem value="channel3">Channel 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                      {/* Primary RTMP URL */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-foreground">Primary RTMP</label>
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            value={rtmpUrl}
-                            readOnly
-                            className="flex-1 h-8 text-xs font-mono"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
-                            title="Copy RTMP URL"
-                          >
-                            {copiedField === "RTMP URL" ? (
-                              <Check className="w-3 h-3 text-primary" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Stream Key (Password) */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-foreground">Stream Key</label>
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            type={showStreamKey ? "text" : "password"}
-                            value={streamKey}
-                            readOnly
-                            className="flex-1 h-8 text-xs font-mono"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => setShowStreamKey(!showStreamKey)}
-                            title={showStreamKey ? "Hide Stream Key" : "Show Stream Key"}
-                          >
-                            {showStreamKey ? (
-                              <EyeOff className="w-3 h-3" />
-                            ) : (
-                              <Eye className="w-3 h-3" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleCopy(streamKey, "Stream Key")}
-                            title="Copy Stream Key"
-                          >
-                            {copiedField === "Stream Key" ? (
-                              <Check className="w-3 h-3 text-primary" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    {/* LIVE CHANNELS Section */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                        Live Channels
-                      </h3>
-                      <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="SELECT LIVE CHANNEL" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="channel1">Channel 1</SelectItem>
-                          <SelectItem value="channel2">Channel 2</SelectItem>
-                          <SelectItem value="channel3">Channel 3</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* SOCIAL PUBLISH Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide flex-1">
-                          Social Publish
-                        </h3>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="h-7 w-7 p-0 rounded-full flex-shrink-0"
-                          onClick={() => {
-                            toast({
-                              title: "Add Social Destination",
-                              description: "Feature coming soon",
-                            });
-                          }}
-                          title="Add Social Destination"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {/* Placeholder for social destinations list */}
-                        <div className="text-xs text-muted-foreground">
-                          No social destinations added yet
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AUTO PUBLISH Section */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-border">
-                      <Checkbox
-                        id="auto-publish"
-                        checked={autoPublish}
-                        onCheckedChange={(checked) => setAutoPublish(checked === true)}
-                        className="rounded-none h-4 w-4"
-                      />
-                      <label
-                        htmlFor="auto-publish"
-                        className="text-sm font-medium text-foreground cursor-pointer"
-                      >
-                        Auto Publish
-                      </label>
-                    </div>
+              {/* Social Publish Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide flex-1">
+                    Social Publish
+                  </h3>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-7 w-7 p-0 rounded-full flex-shrink-0"
+                    onClick={() => {
+                      toast({
+                        title: "Add Social Destination",
+                        description: "Feature coming soon",
+                      });
+                    }}
+                    title="Add Social Destination"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    No social destinations added yet
                   </div>
-                </ScrollArea>
+                </div>
+              </div>
+
+              {/* Auto Publish Section */}
+              <div className="flex items-center gap-2 pt-2 border-t border-border pb-4">
+                <Checkbox
+                  id="auto-publish"
+                  checked={autoPublish}
+                  onCheckedChange={(checked) => setAutoPublish(checked === true)}
+                  className="rounded-none h-4 w-4"
+                />
+                <label
+                  htmlFor="auto-publish"
+                  className="text-sm font-medium text-foreground cursor-pointer"
+                >
+                  Auto Publish
+                </label>
               </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </ScrollArea>
+        </TabsContent>
 
-      {/* Moments Dialog */}
-      <Dialog open={isMomentsOpen} onOpenChange={setIsMomentsOpen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Moments</DialogTitle>
-            <DialogDescription>
-              View all screenshots captured during the event
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col min-h-0 mt-4">
-            <ScrollArea className="flex-1">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pr-4">
-                {screenshots.map((screenshot) => (
-                  <div
-                    key={screenshot.id}
-                    className="group relative aspect-video rounded-lg border border-border bg-muted/30 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer"
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">Screenshot</div>
-                        <div className="text-[10px] text-muted-foreground">{screenshot.timestamp}</div>
-                      </div>
-                    </div>
-                    {/* Overlay with timestamp and title */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
-                      <div className="text-xs font-semibold text-white mb-1 text-center">
-                        {screenshot.title || "Screenshot"}
-                      </div>
-                      <div className="text-[10px] text-white/80">{screenshot.timestamp}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
-          <DialogHeader className="pb-3">
-            <DialogTitle className="text-base">Event Settings</DialogTitle>
-            <DialogDescription className="text-sm">
-              Configure event features and settings
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col min-h-0 mt-3 overflow-y-auto">
-            <div className="space-y-4 max-w-2xl">
-              {/* Toggle Settings */}
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="flex-1 flex flex-col min-h-0 mt-3 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-4 pr-2">
+              {/* Features Section */}
               <div className="space-y-2.5">
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
                   Features
@@ -899,31 +770,8 @@ export function LiveModerationPanel({
                 </div>
               </div>
 
-              {/* Moments Allowed */}
-              <div className="space-y-2.5">
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Moments Configuration
-                </h3>
-                <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                  <label className="text-sm font-medium text-foreground">
-                    Moments Allowed
-                  </label>
-                  <Select value={momentsAllowed} onValueChange={setMomentsAllowed}>
-                    <SelectTrigger className="w-[120px] h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">No</SelectItem>
-                      <SelectItem value="client-only">Client Only</SelectItem>
-                      <SelectItem value="admin-only">Admin Only</SelectItem>
-                      <SelectItem value="both">Both</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               {/* Reset Stream Button */}
-              <div className="pt-3">
+              <div className="pt-3 pb-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -935,9 +783,12 @@ export function LiveModerationPanel({
                 </Button>
               </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
+
+
+
 
       {/* Reset Stream Confirmation Dialog */}
       <AlertDialog open={isResetStreamDialogOpen} onOpenChange={setIsResetStreamDialogOpen}>

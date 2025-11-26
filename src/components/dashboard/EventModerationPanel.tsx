@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatModeration, type ChatMessage, type BlockedUser } from "./moderation/ChatModeration";
 import { QAPanel } from "./moderation/QAPanel";
-import { EventSummary } from "./moderation/EventSummary";
+import { useState } from "react";
 
 interface EventModerationPanelProps {
   messages: ChatMessage[];
@@ -12,7 +12,6 @@ interface EventModerationPanelProps {
   onToggleSelect?: (messageId: string) => void;
   onCopy?: (message: string) => void;
   onDeleteMessage?: (messageId: string) => void;
-  isModerationStopped?: boolean;
 }
 
 export function EventModerationPanel({
@@ -24,20 +23,25 @@ export function EventModerationPanel({
   onToggleSelect,
   onCopy,
   onDeleteMessage,
-  isModerationStopped = false,
 }: EventModerationPanelProps) {
+  // Lift auto-scroll state to parent to persist across tab switches
+  // These states persist independently for each tab
+  // Default to disabled (false)
+  const [commentsAutoScroll, setCommentsAutoScroll] = useState(false);
+  const [studioAutoScroll, setStudioAutoScroll] = useState(false);
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-sm font-semibold mb-2">Event Moderation</h2>
 
-      <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+      <Tabs defaultValue="comments" className="flex-1 flex flex-col">
         <TabsList className="w-full">
-          <TabsTrigger value="chat">Chats</TabsTrigger>
+          <TabsTrigger value="comments">Comments</TabsTrigger>
+          <TabsTrigger value="studio">Studio Chat</TabsTrigger>
+          <TabsTrigger value="private">Private Chats</TabsTrigger>
           <TabsTrigger value="qa">Q&A Panel</TabsTrigger>
-          <TabsTrigger value="summary">Live Event Overview</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="chat" className="flex-1 mt-2">
+        <TabsContent value="comments" className="flex-1 mt-2">
           <ChatModeration
             messages={messages}
             blockedUsers={blockedUsers}
@@ -47,15 +51,44 @@ export function EventModerationPanel({
             onToggleSelect={onToggleSelect}
             onCopy={onCopy}
             onDeleteMessage={onDeleteMessage}
+            activeTab="comments"
+            autoScroll={commentsAutoScroll}
+            onAutoScrollChange={setCommentsAutoScroll}
+          />
+        </TabsContent>
+
+        <TabsContent value="studio" className="flex-1 mt-2">
+          <ChatModeration
+            messages={messages}
+            blockedUsers={blockedUsers}
+            onBlockUser={onBlockUser}
+            onUnblockUser={onUnblockUser}
+            onToggleHide={onToggleHide}
+            onToggleSelect={onToggleSelect}
+            onCopy={onCopy}
+            onDeleteMessage={onDeleteMessage}
+            activeTab="studio"
+            autoScroll={studioAutoScroll}
+            onAutoScrollChange={setStudioAutoScroll}
+          />
+        </TabsContent>
+
+        <TabsContent value="private" className="flex-1 mt-2">
+          <ChatModeration
+            messages={messages}
+            blockedUsers={blockedUsers}
+            onBlockUser={onBlockUser}
+            onUnblockUser={onUnblockUser}
+            onToggleHide={onToggleHide}
+            onToggleSelect={onToggleSelect}
+            onCopy={onCopy}
+            onDeleteMessage={onDeleteMessage}
+            activeTab="private"
           />
         </TabsContent>
 
         <TabsContent value="qa" className="flex-1 mt-2">
-          <QAPanel onBlockUser={onBlockUser} blockedUsers={blockedUsers} isModerationStopped={isModerationStopped} />
-        </TabsContent>
-
-        <TabsContent value="summary" className="flex-1 mt-2">
-          <EventSummary />
+          <QAPanel onBlockUser={onBlockUser} blockedUsers={blockedUsers} />
         </TabsContent>
       </Tabs>
     </div>

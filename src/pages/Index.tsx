@@ -7,13 +7,12 @@ import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation
 
 const Index = () => {
   const [isLive, setIsLive] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const [elapsedTime, setElapsedTime] = useState("00:45:32");
   const [activeSource, setActiveSource] = useState("Camera-1");
   const [publishingHealth, setPublishingHealth] = useState<"stable" | "warning" | "poor">(
     "stable"
   );
-  const [isModerationStopped, setIsModerationStopped] = useState(false);
-  const [messagesBeforeStop, setMessagesBeforeStop] = useState<Set<string>>(new Set());
   const [viewType, setViewType] = useState<"input" | "output">("input");
   const [concurrentUsers, setConcurrentUsers] = useState(3);
   const [totalUsers, setTotalUsers] = useState(9);
@@ -81,11 +80,23 @@ const Index = () => {
 
   const handleStart = () => {
     setIsLive(true);
+    setIsPaused(false);
     setElapsedTime("00:00:00");
   };
 
   const handleStop = () => {
     setIsLive(false);
+    setIsPaused(false);
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+    setIsLive(false);
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    setIsLive(true);
   };
 
   const handleSettings = () => {
@@ -154,18 +165,8 @@ const Index = () => {
     console.log("Message copied:", message);
   };
 
-  const handleStopModeration = () => {
-    if (!isModerationStopped) {
-      // Store current message IDs before stopping
-      setMessagesBeforeStop(new Set(messages.map((msg) => msg.id)));
-    }
-    setIsModerationStopped(!isModerationStopped);
-  };
-
-  // Filter messages to only show those that existed before moderation was stopped
-  const filteredMessages = isModerationStopped
-    ? messages.filter((msg) => messagesBeforeStop.has(msg.id))
-    : messages;
+  // Use all messages (no filtering needed)
+  const filteredMessages = messages;
   const chatMessageCount = messages.length;
 
   return (
@@ -173,16 +174,18 @@ const Index = () => {
       {/* Header */}
       <DashboardHeader
         isLive={isLive}
+        isPaused={isPaused}
         eventTitle="Live Event – Global Summit"
+        eventId="npn57jcgzzo"
         elapsedTime={elapsedTime}
-        isModerationStopped={isModerationStopped}
         concurrentUsers={concurrentUsers}
         totalUsers={totalUsers}
         isRecording={isRecording}
         onStart={handleStart}
         onStop={handleStop}
+        onPause={handlePause}
+        onResume={handleResume}
         onSettings={handleSettings}
-        onStopModeration={handleStopModeration}
         onStartRecording={handleStartRecording}
         onEndEvent={handleEndEvent}
         onBack={handleBack}
@@ -191,7 +194,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
         {/* Left Panel - Live Moderation */}
-        <aside className="w-[35%] border-r border-border p-6 overflow-y-auto">
+        <aside className="w-[35%] border-r border-border p-6 flex flex-col overflow-hidden">
           <LiveModerationPanel
             publishingHealth={publishingHealth}
             activeSource={activeSource}
@@ -218,7 +221,6 @@ const Index = () => {
             onToggleSelect={handleToggleSelect}
             onCopy={handleCopy}
             onDeleteMessage={handleDeleteMessage}
-            isModerationStopped={isModerationStopped}
           />
         </section>
       </main>

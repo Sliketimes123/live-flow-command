@@ -46,15 +46,13 @@ interface Question {
 interface QAPanelProps {
   onBlockUser?: (username: string) => void;
   blockedUsers?: BlockedUser[];
-  isModerationStopped?: boolean;
 }
 
-export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = false }: QAPanelProps) {
+export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedQuestionId, setCopiedQuestionId] = useState<string | null>(null);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
-  const [questionsBeforeStop, setQuestionsBeforeStop] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const [questions, setQuestions] = useState<Question[]>([
     {
@@ -217,22 +215,8 @@ export function QAPanel({ onBlockUser, blockedUsers = [], isModerationStopped = 
     setSelectedUserToBlock(null);
   };
 
-  // Track questions when moderation is stopped
-  useEffect(() => {
-    if (isModerationStopped) {
-      // Store current question IDs when moderation is stopped
-      setQuestionsBeforeStop(new Set(questions.map((q) => q.id)));
-    } else {
-      // Clear the set when moderation resumes
-      setQuestionsBeforeStop(new Set());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isModerationStopped]);
-
-  // Filter questions to only show those that existed before moderation was stopped
-  const filteredQuestions = isModerationStopped
-    ? questions.filter((q) => questionsBeforeStop.has(q.id))
-    : questions;
+  // Use all questions (no filtering needed)
+  const filteredQuestions = questions;
 
   // Filter questions based on search query
   const filterQuestions = (questions: Question[]) => {

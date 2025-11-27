@@ -1,6 +1,7 @@
-import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, HelpCircle, Heart, Users } from "lucide-react";
+import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, HelpCircle, Heart, Users, Radio, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState, useMemo, Fragment } from "react";
+import { useToast } from "@/hooks/use-toast";
 import type { ChatMessage, BlockedUser } from "./moderation/ChatModeration";
 
 interface StatusBarProps {
@@ -64,6 +78,9 @@ export function StatusBar({
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSocialPublishDialogOpen, setIsSocialPublishDialogOpen] = useState(false);
+  const [autoPublish, setAutoPublish] = useState(true);
+  const { toast } = useToast();
 
   const healthColor = {
     stable: "text-success bg-success/10 border-success/20",
@@ -157,27 +174,275 @@ export function StatusBar({
     frameRate: fps,
   };
 
+  // Mock social publish destinations for status bar
+  const socialDestinations = [
+    { id: "1", name: "YouTube", isPublished: true },
+    { id: "2", name: "Facebook", isPublished: true },
+    { id: "3", name: "Twitter", isPublished: false },
+  ];
+
+  const publishedCount = socialDestinations.filter(d => d.isPublished).length;
+
+  // Detailed social publish destinations for dialog
+  const detailedSocialDestinations = [
+    {
+      id: "1",
+      channelName: "NBT UP-Uttarakhand",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR Vote Chori | Rahul Gandhi",
+      status: "ONLINE",
+      platform: "YouTube",
+      logo: "NBT",
+      logoColor: "bg-black",
+      textColor: "text-white",
+      subText: "यूपी-उत्तराखंड",
+      subTextColor: "text-red-600",
+    },
+    {
+      id: "2",
+      channelName: "Navbharat Times नवभारत",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
+      status: "ONLINE",
+      platform: "YouTube",
+      logo: "NBT",
+      logoColor: "bg-red-600",
+      textColor: "text-white",
+      subText: "नवभारत टाइम्स",
+      subTextColor: "text-white",
+    },
+    {
+      id: "3",
+      channelName: "Navbharat Times Online",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
+      status: "ONLINE",
+      platform: "Facebook",
+      logo: "p",
+      logoColor: "bg-gray-400",
+      textColor: "text-white",
+      subText: "",
+      subTextColor: "",
+    },
+    {
+      id: "4",
+      channelName: "NBT Uttar Pradesh",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
+      status: "ONLINE",
+      platform: "Facebook",
+      logo: "p",
+      logoColor: "bg-gray-400",
+      textColor: "text-white",
+      subText: "",
+      subTextColor: "",
+    },
+  ];
+
   return (
     <Fragment>
       <footer className="h-9 border-t border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between text-xs">
       <div className="flex items-center gap-3">
-        {/* Status bar can show other information if needed */}
+        {/* Input Stream Health - Non-clickable */}
+        <TooltipProvider delayDuration={300}>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5 cursor-default opacity-70">
+                <Radio className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${healthColor[inputData.streamHealth]}`}>
+                  {healthText[inputData.streamHealth]}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Input Stream Health</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <div className="h-4 w-px bg-border" />
+
+        {/* Output Stream Health - Non-clickable */}
+        <TooltipProvider delayDuration={300}>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5 cursor-default opacity-70">
+                <Radio className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${healthColor[outputData.streamHealth]}`}>
+                  {healthText[outputData.streamHealth]}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Output Stream Health</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <div className="h-4 w-px bg-border" />
+
+        {/* Social Publish */}
+        <Dialog open={isSocialPublishDialogOpen} onOpenChange={setIsSocialPublishDialogOpen}>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                  <button className="flex items-center gap-1.5 cursor-pointer hover:bg-accent/50 rounded px-1.5 py-0.5 transition-colors">
+                    <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <div className="flex items-center gap-1">
+                      {socialDestinations.filter(d => d.isPublished).map((dest) => (
+                        <span
+                          key={dest.id}
+                          className="text-xs font-semibold text-primary px-1.5 py-0.5 bg-primary/10 rounded"
+                        >
+                          {dest.name}
+                        </span>
+                      ))}
+                      {publishedCount === 0 && (
+                        <span className="text-xs text-muted-foreground">No destinations</span>
+                      )}
+                    </div>
+                  </button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Social Publish</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
+            <DialogHeader className="pb-3">
+              <DialogTitle className="text-base font-semibold uppercase tracking-wide">Social Publish</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+              {/* Header Controls */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="auto-publish"
+                      checked={autoPublish}
+                      onCheckedChange={(checked) => setAutoPublish(checked === true)}
+                      className="rounded-none h-4 w-4"
+                    />
+                    <label
+                      htmlFor="auto-publish"
+                      className="text-sm font-medium text-foreground cursor-pointer"
+                    >
+                      Auto Publish
+                    </label>
+                  </div>
+                  <button className="text-sm text-destructive hover:text-destructive/80 transition-colors">
+                    Unpublish All
+                  </button>
+                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 w-7 p-0 rounded-full"
+                  onClick={() => {
+                    toast({
+                      title: "Add Social Destination",
+                      description: "Feature coming soon",
+                    });
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Social Destinations List */}
+              <div className="space-y-3">
+                {detailedSocialDestinations.map((dest) => (
+                  <div
+                    key={dest.id}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    {/* Profile Picture/Logo */}
+                    <div className="relative flex-shrink-0">
+                      <div className={`w-12 h-12 ${dest.logoColor} rounded-lg flex items-center justify-center relative overflow-hidden`}>
+                        <span className={`text-lg font-bold ${dest.textColor}`}>{dest.logo}</span>
+                        {dest.subText && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
+                            <span className={`text-[8px] ${dest.subTextColor} font-medium`}>{dest.subText}</span>
+                          </div>
+                        )}
+                        {/* Platform Icon Overlay */}
+                        <div className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-lg flex items-center justify-center bg-white">
+                          {dest.platform === "YouTube" ? (
+                            <div className="w-3 h-3 bg-red-600 rounded-sm flex items-center justify-center">
+                              <span className="text-white text-[8px] font-bold">▶</span>
+                            </div>
+                          ) : (
+                            <div className="w-3 h-3 bg-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-[8px] font-bold">f</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Channel Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-sm font-semibold text-foreground">{dest.channelName}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">{dest.status}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="w-3 h-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <ExternalLink className="w-3 h-3 mr-2" />
+                                Visit channel
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Pencil className="w-3 h-3 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                <X className="w-3 h-3 mr-2" />
+                                Unpublish
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{dest.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex items-center gap-1.5">
         {/* Selected Chat Button */}
         <Dialog open={isSelectedChatDialogOpen} onOpenChange={setIsSelectedChatDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
-              <Star className="w-3 h-3" />
-              Selected Chat
-              {selectedMessages.length > 0 && (
-                <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
-                  {selectedMessages.length}
-                </span>
-              )}
-            </Button>
-          </DialogTrigger>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  {selectedMessages.length > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                      {selectedMessages.length}
+                    </span>
+                  )}
+                </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Selected Chat</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
             <DialogHeader>
               <DialogTitle>Selected Chats</DialogTitle>
@@ -254,61 +519,90 @@ export function StatusBar({
         </Dialog>
 
         {/* Chat Messages Summary */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1 h-7 text-xs px-2 font-semibold text-foreground"
-          title="Total chat messages"
-          disabled
-        >
-          <MessageSquare className="w-3 h-3" />
-          Chat Messages
-          <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full">
-            {totalChatMessages}
-          </span>
-        </Button>
+        <TooltipProvider delayDuration={300}>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
+                disabled
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
+                  {totalChatMessages}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Chat Messages</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-        {/* Q&A Summary */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1 h-7 text-xs px-2 font-semibold text-foreground"
-          title="Total Q&A items"
-          disabled
-        >
-          <HelpCircle className="w-3 h-3" />
-          Q&A
-          <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full">
-            {qaCount}
-          </span>
-        </Button>
+        {/* Q&A Summary - Non-clickable */}
+        <TooltipProvider delayDuration={300}>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
+                disabled
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
+                  {qaCount}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Q&A</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-        {/* Reactions Summary */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1 h-7 text-xs px-2 font-semibold text-foreground"
-          title="Total reactions"
-          disabled
-        >
-          <Heart className="w-3 h-3" />
-          Reactions
-          <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full">
-            {reactionsCount}
-          </span>
-        </Button>
+        {/* Reactions Summary - Non-clickable */}
+        <TooltipProvider delayDuration={300}>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
+                disabled
+              >
+                <Heart className="w-3.5 h-3.5" />
+                <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
+                  {reactionsCount}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Reactions</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Active Users Button */}
         <Dialog open={isActiveUsersDialogOpen} onOpenChange={setIsActiveUsersDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
-              <Users className="w-3 h-3" />
-              Active Users
-              <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
-                3
-              </span>
-            </Button>
-          </DialogTrigger>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer">
+                    <Users className="w-3.5 h-3.5" />
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                      3
+                    </span>
+                  </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Active Users</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
             <DialogHeader>
               <DialogTitle>Active Users</DialogTitle>
@@ -346,17 +640,25 @@ export function StatusBar({
 
         {/* Block User Button */}
         <Dialog open={isBlockUserDialogOpen} onOpenChange={setIsBlockUserDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
-            <Ban className="w-3 h-3" />
-            Block User
-            {blockedUsers.length > 0 && (
-              <span className="ml-0.5 px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
-                {blockedUsers.length}
-              </span>
-            )}
-          </Button>
-        </DialogTrigger>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer">
+                    <Ban className="w-3.5 h-3.5" />
+                    {blockedUsers.length > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                        {blockedUsers.length}
+                      </span>
+                    )}
+                  </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Block User</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col">
           <DialogHeader>
             <DialogTitle>Block / Unblock Users</DialogTitle>

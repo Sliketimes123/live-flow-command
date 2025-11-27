@@ -5,7 +5,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause, X } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +63,7 @@ export function DashboardHeader({
   onBack,
 }: DashboardHeaderProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isEndEventDialogOpen, setIsEndEventDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleCopy = async (text: string, fieldName: string) => {
@@ -84,23 +101,31 @@ export function DashboardHeader({
         {eventId && (
           <>
             <div className="h-4 w-px bg-border" />
-            <button
-              onClick={() => handleCopy(eventId, "Event ID")}
-              className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
-              title="Click to copy Event ID"
-            >
-              <img 
-                src="/slike_mini.svg" 
-                alt="Event ID Logo" 
-                className="w-4 h-4 flex-shrink-0"
-              />
-              <span className="font-mono text-xs">{eventId}</span>
-              {copiedField === "Event ID" ? (
-                <Check className="w-3 h-3 text-primary" />
-              ) : (
-                <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
-            </button>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleCopy(eventId, "Event ID")}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
+                  >
+                    <img 
+                      src="/slike_mini.svg" 
+                      alt="Event ID Logo" 
+                      className="w-4 h-4 flex-shrink-0"
+                    />
+                    <span className="font-mono text-xs">{eventId}</span>
+                    {copiedField === "Event ID" ? (
+                      <Check className="w-3 h-3 text-primary" />
+                    ) : (
+                      <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click to copy Event ID</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </>
         )}
       </div>
@@ -138,36 +163,25 @@ export function DashboardHeader({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1.5">
-          <Button
+        <div className="flex items-center">
+          <button
             onClick={onStartRecording}
-            size="sm"
-            variant={isRecording ? "destructive" : "outline"}
-            className="h-7 text-[10px] px-1.5 w-[120px] flex items-center gap-1.5 justify-center"
+            className="h-7 px-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!isLive && !isPaused}
           >
-            <Circle className="w-3 h-3 flex-shrink-0" />
-            <span className="whitespace-nowrap leading-none">
-              {isRecording ? "STOP REC" : "START REC"}
-            </span>
-          </Button>
+            {isRecording ? "STOP REC" : "START REC"}
+          </button>
+          <div className="h-4 w-px bg-border mx-1" />
           
           {/* Live Control Button with Dropdown */}
           {isLive ? (
             // Condition 1: When Live is active, show "STOP LIVE" with dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="h-7 text-[10px] px-1.5 w-[120px] flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <Square className="w-3 h-3 flex-shrink-0" />
-                    <span className="whitespace-nowrap leading-none">STOP LIVE</span>
-                  </div>
-                  <ChevronDown className="w-3 h-3 flex-shrink-0 ml-1" />
-                </Button>
+                <button className="h-7 px-3 text-xs font-semibold text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1">
+                  STOP LIVE
+                  <ChevronDown className="w-3 h-3" />
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onPause}>
@@ -178,23 +192,23 @@ export function DashboardHeader({
                   <Square className="w-3 h-3 mr-2" />
                   Stop Live
                 </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setIsEndEventDialogOpen(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <X className="w-3 h-3 mr-2" />
+                  End Event
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : isPaused ? (
             // Condition 2: When Paused, show "PAUSE LIVE" with dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-7 text-[10px] px-1.5 bg-yellow-600 hover:bg-yellow-700 text-white w-[120px] flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <Pause className="w-3 h-3 flex-shrink-0" />
-                    <span className="whitespace-nowrap leading-none">PAUSE LIVE</span>
-                  </div>
-                  <ChevronDown className="w-3 h-3 flex-shrink-0 ml-1" />
-                </Button>
+                <button className="h-7 px-3 text-xs font-semibold text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1">
+                  PAUSE LIVE
+                  <ChevronDown className="w-3 h-3" />
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onStop}>
@@ -205,30 +219,50 @@ export function DashboardHeader({
                   <Play className="w-3 h-3 mr-2" />
                   Start Live
                 </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setIsEndEventDialogOpen(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <X className="w-3 h-3 mr-2" />
+                  End Event
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             // Condition 3: When stopped, show "START LIVE" button (direct action)
-            <Button
+            <button
               onClick={onStart}
-              size="sm"
-              variant="outline"
-              className="h-7 text-[10px] px-1.5 w-[120px] flex items-center gap-1.5"
+              className="h-7 px-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Play className="w-3 h-3 flex-shrink-0" />
-              <span className="whitespace-nowrap leading-none">START LIVE</span>
-            </Button>
+              START LIVE
+            </button>
           )}
-          <Button
-            onClick={onEndEvent}
-            size="sm"
-            variant="destructive"
-            className="h-7 text-[10px] px-1.5 w-[120px] flex items-center gap-1.5 justify-center"
-          >
-            END EVENT
-          </Button>
         </div>
       </div>
+
+      {/* End Event Warning Dialog */}
+      <AlertDialog open={isEndEventDialogOpen} onOpenChange={setIsEndEventDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Warning!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure, you want to End Event?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsEndEventDialogOpen(false);
+                onEndEvent();
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              CONFIRM
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }

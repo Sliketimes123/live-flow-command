@@ -103,7 +103,6 @@ export function LiveModerationPanel({
   const [quickMessagesEnabled, setQuickMessagesEnabled] = useState(false);
   const [reactionsEnabled, setReactionsEnabled] = useState(true);
   const [reactionStatsEnabled, setReactionStatsEnabled] = useState(true);
-  const [screenshotsEnabled, setScreenshotsEnabled] = useState(false);
   const [qnaEnabled, setQnaEnabled] = useState(true);
   
   const { toast } = useToast();
@@ -282,7 +281,7 @@ export function LiveModerationPanel({
           {/* Main Tabs List */}
           <TabsList className="w-full mb-2">
             <TabsTrigger value="event-health">Event Health</TabsTrigger>
-            <TabsTrigger value="info-section">Info Section</TabsTrigger>
+            <TabsTrigger value="info-section">Info</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -507,30 +506,11 @@ export function LiveModerationPanel({
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">{eventDescription}</p>
                 
-                {/* Date and Time with Event ID */}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
-                  <div className="flex items-center gap-2">
-                    <span>{eventDate}</span>
-                    <span>•</span>
-                    <span>{eventTime}</span>
-                  </div>
-                  <button
-                    onClick={() => handleCopy(eventId, "Event ID")}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
-                    title="Click to copy Event ID"
-                  >
-                    <img 
-                      src="/slike_mini.svg" 
-                      alt="Event ID Logo" 
-                      className="w-4 h-4 flex-shrink-0"
-                    />
-                    <span className="font-mono text-xs">{eventId}</span>
-                    {copiedField === "Event ID" ? (
-                      <Check className="w-3 h-3 text-primary" />
-                    ) : (
-                      <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
-                  </button>
+                {/* Date and Time */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
+                  <span>{eventDate}</span>
+                  <span>•</span>
+                  <span>{eventTime}</span>
                 </div>
               </div>
 
@@ -622,49 +602,6 @@ export function LiveModerationPanel({
                 </Select>
               </div>
 
-              {/* Social Publish Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide flex-1">
-                    Social Publish
-                  </h3>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="h-7 w-7 p-0 rounded-full flex-shrink-0"
-                    onClick={() => {
-                      toast({
-                        title: "Add Social Destination",
-                        description: "Feature coming soon",
-                      });
-                    }}
-                    title="Add Social Destination"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
-                    No social destinations added yet
-                  </div>
-                </div>
-              </div>
-
-              {/* Auto Publish Section */}
-              <div className="flex items-center gap-2 pt-2 border-t border-border pb-4">
-                <Checkbox
-                  id="auto-publish"
-                  checked={autoPublish}
-                  onCheckedChange={(checked) => setAutoPublish(checked === true)}
-                  className="rounded-none h-4 w-4"
-                />
-                <label
-                  htmlFor="auto-publish"
-                  className="text-sm font-medium text-foreground cursor-pointer"
-                >
-                  Auto Publish
-                </label>
-              </div>
             </div>
           </ScrollArea>
         </TabsContent>
@@ -743,17 +680,6 @@ export function LiveModerationPanel({
                     <Switch
                       checked={reactionStatsEnabled}
                       onCheckedChange={setReactionStatsEnabled}
-                    />
-                  </div>
-
-                  {/* Screenshots */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Screenshots
-                    </label>
-                    <Switch
-                      checked={screenshotsEnabled}
-                      onCheckedChange={setScreenshotsEnabled}
                     />
                   </div>
 

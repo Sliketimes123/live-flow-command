@@ -248,7 +248,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
   return (
     <div className="flex flex-col h-full bg-background/50 rounded-xl">
       <Tabs defaultValue="queue" className="flex-1 flex flex-col h-full">
-        <div className="px-0 pb-2">
+        <div className="px-0 pb-1">
           <TabsList className="w-full bg-muted/50 p-1 h-9">
             <TabsTrigger value="queue" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <HelpCircle className="w-3 h-3 mr-1.5" />
@@ -265,7 +265,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
           </TabsList>
         </div>
 
-        <TabsContent value="queue" className="flex-1 mt-0 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col">
+        <TabsContent value="queue" className="flex-1 mt-3 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col pt-2">
           {/* Search Bar */}
           <div className="relative px-1 mb-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -303,7 +303,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="selected" className="flex-1 mt-0 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col">
+        <TabsContent value="selected" className="flex-1 mt-3 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col pt-2">
           {/* Search Bar */}
           <div className="relative px-1 mb-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -341,7 +341,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="closed" className="flex-1 mt-0 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col" >
+        <TabsContent value="closed" className="flex-1 mt-3 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col pt-2" >
           {/* Search Bar */}
           <div className="relative px-1 mb-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -481,16 +481,16 @@ function QueueQuestionCard({
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-bold text-foreground text-[10px]">{question.username}</span>
-            <span className="text-[9px] text-muted-foreground font-mono">{question.timestamp}</span>
+            <span className="font-bold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{question.timestamp}</span>
             {blocked && (
-              <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
+              <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
           </div>
-          <p className="text-[10px] text-foreground/90 leading-snug break-words">{question.question}</p>
+          <p className="text-xs text-foreground/90 leading-snug break-words">{question.question}</p>
         </div>
         <div className="flex items-center gap-0.5">
           <Button
@@ -582,7 +582,7 @@ function SelectedQuestionCard({
             {question.assignedTo && (
               <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
-            <span className="ml-auto text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
+            <span className="ml-auto text-[10px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
               SELECTED
             </span>
           </div>
@@ -678,7 +678,7 @@ function ClosedQuestionCard({
             {question.assignedTo && (
               <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
-            <span className="ml-auto text-[9px] text-muted-foreground font-bold uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
+            <span className="ml-auto text-[10px] text-muted-foreground font-bold uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
               SKIPPED
             </span>
           </div>

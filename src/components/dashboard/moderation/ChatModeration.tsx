@@ -13,10 +13,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Star, EyeOff, Copy, Check, Trash2, Send, User, Ban, MessageSquare, Lock, Users } from "lucide-react";
+import { Search, Star, EyeOff, Copy, Check, Trash2, Send, User, Ban, MessageSquare } from "lucide-react";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface ChatMessage {
   id: string;
@@ -68,11 +67,10 @@ export function ChatModeration({
   onToggleSelect,
   onCopy,
   onDeleteMessage,
-  activeTab: propActiveTab = "comments",
+  activeTab = "comments",
   autoScroll: propAutoScroll,
   onAutoScrollChange,
 }: ChatModerationProps) {
-  const [activeTab, setActiveTab] = useState<string>(propActiveTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [studioSearchQuery, setStudioSearchQuery] = useState("");
   // Fallback to internal state if props not provided (for backward compatibility)
@@ -358,7 +356,7 @@ export function ChatModeration({
   const renderCommentsContent = () => (
     <div className="flex-1 flex flex-col space-y-2 h-full overflow-hidden">
       {/* Search Bar & Auto Scroll Toggle */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center px-1">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center px-1 pt-2">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
@@ -416,20 +414,20 @@ export function ChatModeration({
                         {msg.isSelected && (
                           <Star className="w-3 h-3 text-primary fill-primary" />
                         )}
-                        <span className="font-bold text-foreground text-[10px]">
+                        <span className="font-bold text-foreground text-xs">
                           {msg.username}
                         </span>
-                        <span className="text-[9px] text-muted-foreground tracking-wide font-mono">
+                        <span className="text-[10px] text-muted-foreground tracking-wide font-mono">
                           {msg.timestamp}
                         </span>
                         {msg.isHighlighted && (
                           <Star className="w-3 h-3 text-primary fill-primary" />
                         )}
                         {blocked && (
-                          <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
+                          <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
                         )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-snug break-words">
+                      <p className="text-xs text-muted-foreground leading-snug break-words">
                         {msg.message}
                       </p>
                     </div>
@@ -507,7 +505,7 @@ export function ChatModeration({
   const renderStudioChatContent = () => (
     <div className="flex-1 flex flex-col space-y-2 h-full overflow-hidden">
       {/* Search Bar & Auto Scroll Toggle */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center px-1">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center px-1 pt-2">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
@@ -565,20 +563,20 @@ export function ChatModeration({
                         {msg.isSelected && (
                           <Star className="w-3 h-3 text-primary fill-primary" />
                         )}
-                        <span className="font-bold text-foreground text-[10px]">
+                        <span className="font-bold text-foreground text-xs">
                           {msg.username}
                         </span>
-                        <span className="text-[9px] text-muted-foreground tracking-wide font-mono">
+                        <span className="text-[10px] text-muted-foreground tracking-wide font-mono">
                           {msg.timestamp}
                         </span>
                         {msg.isHighlighted && (
                           <Star className="w-3 h-3 text-primary fill-primary" />
                         )}
                         {blocked && (
-                          <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
+                          <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
                         )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-snug break-words">
+                      <p className="text-xs text-muted-foreground leading-snug break-words">
                         {msg.message}
                       </p>
                     </div>
@@ -709,8 +707,8 @@ export function ChatModeration({
                           : "bg-muted text-foreground"
                           }`}
                       >
-                        <p className="text-[10px] leading-snug">{msg.message}</p>
-                        <span className="text-[9px] opacity-70 mt-0.5 block font-mono">
+                        <p className="text-xs leading-snug">{msg.message}</p>
+                        <span className="text-[10px] opacity-70 mt-0.5 block font-mono">
                           {msg.timestamp}
                         </span>
                       </div>
@@ -759,35 +757,10 @@ export function ChatModeration({
 
   return (
     <>
-      <div className="flex flex-col h-full bg-background/50 rounded-xl">
-        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="flex flex-col h-full">
-          <div className="px-0 pb-2">
-            <TabsList className="w-full bg-muted/50 p-1 h-10 mb-2">
-              <TabsTrigger value="comments" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <MessageSquare className="w-3.5 h-3.5 mr-2" />
-                Comments
-              </TabsTrigger>
-              <TabsTrigger value="studio" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Lock className="w-3.5 h-3.5 mr-2" />
-                Studio
-              </TabsTrigger>
-              <TabsTrigger value="private" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Users className="w-3.5 h-3.5 mr-2" />
-                Private
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="comments" className="flex-1 mt-2 data-[state=inactive]:hidden h-full overflow-hidden">
-            {renderCommentsContent()}
-          </TabsContent>
-          <TabsContent value="studio" className="flex-1 mt-2 data-[state=inactive]:hidden h-full overflow-hidden">
-            {renderStudioChatContent()}
-          </TabsContent>
-          <TabsContent value="private" className="flex-1 mt-2 data-[state=inactive]:hidden h-full overflow-hidden">
-            {renderPrivateChatsContent()}
-          </TabsContent>
-        </Tabs>
+      <div className="flex flex-col h-full">
+        {activeTab === "comments" && renderCommentsContent()}
+        {activeTab === "studio" && renderStudioChatContent()}
+        {activeTab === "private" && renderPrivateChatsContent()}
       </div>
 
       {/* Confirm Block Dialog */}

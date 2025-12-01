@@ -245,7 +245,7 @@ export function StatusBar({
   return (
     <Fragment>
       <footer className="h-9 border-t border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between text-xs">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {/* Input Stream Health - Non-clickable */}
         <TooltipProvider delayDuration={300}>
           <Tooltip delayDuration={300}>
@@ -263,7 +263,7 @@ export function StatusBar({
           </Tooltip>
         </TooltipProvider>
 
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border mx-1" />
 
         {/* Output Stream Health - Non-clickable */}
         <TooltipProvider delayDuration={300}>
@@ -282,7 +282,7 @@ export function StatusBar({
           </Tooltip>
         </TooltipProvider>
 
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border mx-1" />
 
         {/* Social Publish */}
         <Dialog open={isSocialPublishDialogOpen} onOpenChange={setIsSocialPublishDialogOpen}>
@@ -424,7 +424,7 @@ export function StatusBar({
         </Dialog>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-3">
         {/* Selected Chat Button */}
         <Dialog open={isSelectedChatDialogOpen} onOpenChange={(open) => {
           setIsSelectedChatDialogOpen(open);
@@ -557,6 +557,8 @@ export function StatusBar({
           </Tooltip>
         </TooltipProvider>
 
+        <div className="h-4 w-px bg-border mx-1" />
+
         {/* Q&A Summary - Non-clickable */}
         <TooltipProvider delayDuration={300}>
           <Tooltip delayDuration={300}>
@@ -581,6 +583,8 @@ export function StatusBar({
           </Tooltip>
         </TooltipProvider>
 
+        <div className="h-4 w-px bg-border mx-1" />
+
         {/* Reactions Summary - Non-clickable */}
         <TooltipProvider delayDuration={300}>
           <Tooltip delayDuration={300}>
@@ -604,6 +608,8 @@ export function StatusBar({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        <div className="h-4 w-px bg-border mx-1" />
 
         {/* Active Users Button */}
         <Dialog open={isActiveUsersDialogOpen} onOpenChange={setIsActiveUsersDialogOpen}>
@@ -658,6 +664,8 @@ export function StatusBar({
             </div>
           </DialogContent>
         </Dialog>
+
+        <div className="h-4 w-px bg-border mx-1" />
 
         {/* Block User Button */}
         <Dialog open={isBlockUserDialogOpen} onOpenChange={setIsBlockUserDialogOpen}>

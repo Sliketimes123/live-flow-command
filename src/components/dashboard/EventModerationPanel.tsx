@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatModeration, type ChatMessage, type BlockedUser } from "./moderation/ChatModeration";
 import { QAPanel } from "./moderation/QAPanel";
-import { MessageSquare, HelpCircle } from "lucide-react";
+import { MessageSquare, Lock, Users, HelpCircle } from "lucide-react";
+import { useState } from "react";
 
 interface EventModerationPanelProps {
   messages: ChatMessage[];
@@ -24,25 +25,38 @@ export function EventModerationPanel({
   onCopy,
   onDeleteMessage,
 }: EventModerationPanelProps) {
+  // Lift auto-scroll state to parent to persist across tab switches
+  // These states persist independently for each tab
+  // Default to disabled (false)
+  const [commentsAutoScroll, setCommentsAutoScroll] = useState(false);
+  const [studioAutoScroll, setStudioAutoScroll] = useState(false);
+
   return (
     <div className="flex flex-col h-full bg-background/50 rounded-xl overflow-hidden">
-      <Tabs defaultValue="chat" className="flex-1 flex flex-col h-full">
-        <div className="p-2 pb-4">
-          <TabsList className="w-full bg-muted/50 p-1 h-10 mb-4">
-            <TabsTrigger value="chat" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+      <Tabs defaultValue="comments" className="flex-1 flex flex-col h-full">
+        <div className="p-2 pb-1">
+          <TabsList className="w-full bg-muted/50 p-1 h-10 mb-1">
+            <TabsTrigger value="comments" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <MessageSquare className="w-3.5 h-3.5 mr-2" />
-              Chat
+              Comments
+            </TabsTrigger>
+            <TabsTrigger value="studio" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Lock className="w-3.5 h-3.5 mr-2" />
+              Studio Chat
+            </TabsTrigger>
+            <TabsTrigger value="private" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Users className="w-3.5 h-3.5 mr-2" />
+              Private Chat
             </TabsTrigger>
             <TabsTrigger value="qa" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <HelpCircle className="w-3.5 h-3.5 mr-2" />
               Q&A
             </TabsTrigger>
-
           </TabsList>
         </div>
 
-        <div className="flex-1 p-2 h-full overflow-hidden">
-          <TabsContent value="chat" className="mt-0 h-full data-[state=inactive]:hidden">
+        <div className="flex-1 p-2 pt-1 h-full overflow-hidden">
+          <TabsContent value="comments" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
             <ChatModeration
               messages={messages}
               blockedUsers={blockedUsers}
@@ -52,14 +66,45 @@ export function EventModerationPanel({
               onToggleSelect={onToggleSelect}
               onCopy={onCopy}
               onDeleteMessage={onDeleteMessage}
+              activeTab="comments"
+              autoScroll={commentsAutoScroll}
+              onAutoScrollChange={setCommentsAutoScroll}
             />
           </TabsContent>
 
-          <TabsContent value="qa" className="mt-0 h-full data-[state=inactive]:hidden">
-            <QAPanel onBlockUser={onBlockUser} blockedUsers={blockedUsers} />
+          <TabsContent value="studio" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
+            <ChatModeration
+              messages={messages}
+              blockedUsers={blockedUsers}
+              onBlockUser={onBlockUser}
+              onUnblockUser={onUnblockUser}
+              onToggleHide={onToggleHide}
+              onToggleSelect={onToggleSelect}
+              onCopy={onCopy}
+              onDeleteMessage={onDeleteMessage}
+              activeTab="studio"
+              autoScroll={studioAutoScroll}
+              onAutoScrollChange={setStudioAutoScroll}
+            />
           </TabsContent>
 
+          <TabsContent value="private" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
+            <ChatModeration
+              messages={messages}
+              blockedUsers={blockedUsers}
+              onBlockUser={onBlockUser}
+              onUnblockUser={onUnblockUser}
+              onToggleHide={onToggleHide}
+              onToggleSelect={onToggleSelect}
+              onCopy={onCopy}
+              onDeleteMessage={onDeleteMessage}
+              activeTab="private"
+            />
+          </TabsContent>
 
+          <TabsContent value="qa" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
+            <QAPanel onBlockUser={onBlockUser} blockedUsers={blockedUsers} />
+          </TabsContent>
         </div>
       </Tabs>
     </div>

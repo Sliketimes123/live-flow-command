@@ -40,7 +40,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Info, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus, Play } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { FileText, Info, Settings, Eye, EyeOff, Copy, ExternalLink, Check, Plus, RotateCw, MoreVertical, UserPlus, Play, Activity, Lock, Layers, Calendar, Clock, Signal, Tv, Sliders, MessageSquare, Users, Zap, Heart, BarChart, HelpCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -95,7 +101,7 @@ export function LiveModerationPanel({
   const [eventId] = useState<string>("npn57jcgzzo"); // Event ID
   const [isResetStreamDialogOpen, setIsResetStreamDialogOpen] = useState(false);
   const [autoPublish, setAutoPublish] = useState(false);
-  
+
   // Settings toggles
   const [commentsEnabled, setCommentsEnabled] = useState(true);
   const [liveDurationEnabled, setLiveDurationEnabled] = useState(false);
@@ -104,7 +110,7 @@ export function LiveModerationPanel({
   const [reactionsEnabled, setReactionsEnabled] = useState(true);
   const [reactionStatsEnabled, setReactionStatsEnabled] = useState(true);
   const [qnaEnabled, setQnaEnabled] = useState(true);
-  
+
   const { toast } = useToast();
 
 
@@ -218,13 +224,43 @@ export function LiveModerationPanel({
       id: "4",
       timestamp: "10:59 AM",
       category: "Stream",
-      description: "",
+      description: "Stream connection established",
     },
     {
       id: "5",
       timestamp: "10:59 AM",
       category: "Stream",
       description: "Live streaming is running",
+    },
+    {
+      id: "6",
+      timestamp: "11:02 AM",
+      category: "Stream",
+      description: "Bitrate stable at 3500 kbps",
+    },
+    {
+      id: "7",
+      timestamp: "11:15 AM",
+      category: "Event",
+      description: "Audience engagement increased",
+    },
+    {
+      id: "8",
+      timestamp: "11:30 AM",
+      category: "Stream",
+      description: "Health check passed",
+    },
+    {
+      id: "9",
+      timestamp: "11:45 AM",
+      category: "Live Status",
+      description: "Viewer count updated: 1.2k",
+    },
+    {
+      id: "10",
+      timestamp: "12:00 PM",
+      category: "Event",
+      description: "Q&A session started",
     },
   ];
 
@@ -273,448 +309,453 @@ export function LiveModerationPanel({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background/50">
       {/* Main Tabs - Event Health, Info Section, Settings */}
       <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="flex flex-col h-full">
         {/* Fixed Section - Main Tabs */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 px-4 pt-2">
           {/* Main Tabs List */}
-          <TabsList className="w-full mb-2">
-            <TabsTrigger value="event-health">Event Health</TabsTrigger>
-            <TabsTrigger value="info-section">Info</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsList className="w-full mb-4 bg-muted/50 p-1 h-10">
+            <TabsTrigger value="event-health" className="flex-1 gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200">
+              <Activity className="w-3.5 h-3.5" />
+              Event Health
+            </TabsTrigger>
+            <TabsTrigger value="event-logs" className="flex-1 gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200">
+              <FileText className="w-3.5 h-3.5" />
+              Logs
+            </TabsTrigger>
+            <TabsTrigger value="info-section" className="flex-1 gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200">
+              <Info className="w-3.5 h-3.5" />
+              Info
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex-1 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">Settings</TabsTrigger>
           </TabsList>
 
           {/* Input/Output Tabs and Live Preview - Only visible for Event Health tab */}
           {activeMainTab === "event-health" && (
-            <>
-              {/* Input/Output Tabs */}
-              <Tabs value={viewType} onValueChange={(value) => handleViewTypeChange(value as "input" | "output")} className="mb-2">
-                <TabsList className="w-full">
-                  <TabsTrigger value="input">Input</TabsTrigger>
-                  <TabsTrigger value="output">Output</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
+            <div className="space-y-2 mb-2">
               {/* Live Player Preview - Fixed */}
-              <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-lg">
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden shadow-md border border-border/50 group ring-1 ring-white/5">
                 {/* Placeholder Video */}
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Play className="w-16 h-16 mx-auto text-white" fill="white" />
+                <div className="w-full h-full flex items-center justify-center bg-zinc-950">
+                  <div className="text-center group-hover:scale-105 transition-transform duration-300">
+                    <Play className="w-8 h-8 mx-auto text-white/50 group-hover:text-white/80 transition-colors" fill="currentColor" />
                   </div>
                 </div>
 
                 {/* Live Badge */}
-                <div className="absolute top-2 right-2 px-2 py-0.5 bg-status-live backdrop-blur-sm rounded flex items-center gap-1 shadow-lg">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse-glow" />
-                  <span className="text-white text-[10px] font-bold uppercase tracking-wide">LIVE</span>
+                <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-red-600/90 backdrop-blur-md rounded flex items-center gap-1 shadow-sm border border-red-500/50">
+                  <div className="w-1 h-1 rounded-full bg-white animate-pulse" />
+                  <span className="text-white text-[9px] font-bold uppercase tracking-wider leading-none">LIVE</span>
                 </div>
+
+                {/* Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               </div>
-            </>
+
+              {/* Input/Output Tabs */}
+              <Tabs value={viewType} onValueChange={(value) => handleViewTypeChange(value as "input" | "output")}>
+                <TabsList className="w-full bg-muted/40 p-0.5 h-7">
+                  <TabsTrigger value="input" className="flex-1 text-[10px] font-medium h-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">Input</TabsTrigger>
+                  <TabsTrigger value="output" className="flex-1 text-[10px] font-medium h-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">Output</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           )}
         </div>
 
         {/* Main Tabs Content */}
         {/* Event Health Tab */}
-        <TabsContent value="event-health" className="flex-1 flex flex-col min-h-0 mt-3 data-[state=active]:flex data-[state=inactive]:hidden">
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-3 pr-2">
-              {/* Stream Health Information */}
-              <div className="space-y-2">
-                {/* Input Stream Health */}
-                <div className="p-2 rounded-lg border border-border bg-card space-y-1.5">
-                  <h4 className="text-xs font-semibold text-foreground mb-1.5">INPUT</h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">STREAM HEALTH:</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${healthTextColor[inputData.streamHealth]}`}
-                      >
-                        {healthText[inputData.streamHealth]}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">INPUT MODE:</span>
-                      <span className="font-semibold text-foreground text-xs">{inputData.inputMode}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">BITRATE:</span>
-                      <span className="font-semibold text-foreground text-xs">
-                        {inputData.bitrateCurrent} kbps (cur), {inputData.bitrateAverage} kbps (avg)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">DIMENSION:</span>
-                      <span className="font-semibold text-foreground text-xs">{inputData.dimension}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">FRAME RATE:</span>
-                      <span className="font-semibold text-foreground text-xs">{inputData.frameRate} FPS</span>
-                    </div>
-                  </div>
-                </div>
+        <TabsContent value="event-health" className="flex-1 flex flex-col min-h-0 px-4 pb-4 mt-0 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+            <div className="space-y-4">
+              <Accordion type="multiple" defaultValue={["input-details", "output-details"]} className="w-full space-y-3">
 
-                {/* Output Stream Health */}
-                <div className="p-2 rounded-lg border border-border bg-card space-y-1.5">
-                  <h4 className="text-xs font-semibold text-foreground mb-1.5">OUTPUT</h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">STREAM HEALTH:</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${healthTextColor[outputData.streamHealth]}`}
-                      >
-                        {healthText[outputData.streamHealth]}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">Modes:</span>
-                      <span className="font-semibold text-foreground text-xs">{outputData.modes}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">QUALITIES:</span>
-                      <span className="font-semibold text-foreground text-xs">{outputData.qualities}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground font-medium text-[10px]">ENCRYPTED:</span>
-                      <span className="font-semibold text-foreground text-xs">{outputData.encrypted}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Event Logs Section */}
-              <div>
-                <div className="mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">Event Logs</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    View all event logs and system status information
-                  </p>
-                </div>
-
-                {/* Status Bar */}
-                <div className="mb-3 p-2 rounded-lg border border-border bg-card">
-                  <div className="flex items-center justify-between">
+                {/* Input Details Accordion */}
+                <AccordionItem value="input-details" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-foreground">INPUT PRIMARY</span>
-                      <span className="text-xs text-muted-foreground">{bitrate} kb/s</span>
+                      <div className={`w-2 h-2 rounded-full ${inputData.streamHealth === 'stable' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Input Details</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Healthy</span>
-                    </div>
-                  </div>
-                </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-3 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Stream Health</span>
+                        <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-bold border ${healthTextColor[inputData.streamHealth]}`}>
+                          {healthText[inputData.streamHealth]}
+                        </span>
+                      </div>
 
-                {/* Event Logs List */}
-                <div className="space-y-2">
-                  {eventLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-start gap-3 p-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                    >
-                      <span className="text-xs text-muted-foreground font-mono whitespace-nowrap mt-0.5">
-                        {log.timestamp}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-bold text-foreground">{log.category}</span>
-                          {log.description && (
-                            <span className="text-xs text-foreground/80">{log.description}</span>
-                          )}
+                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <ExternalLink className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">Mode</span>
+                        </div>
+                        <span className="text-xs font-semibold text-foreground block truncate" title={inputData.inputMode}>{inputData.inputMode}</span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Eye className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">Dim</span>
+                        </div>
+                        <span className="text-xs font-semibold text-foreground block truncate" title={inputData.dimension}>{inputData.dimension}</span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Play className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">FPS</span>
+                        </div>
+                        <span className="text-xs font-semibold text-foreground block truncate">{inputData.frameRate}</span>
+                      </div>
+
+                      <div className="col-span-3 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Activity className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">Bitrate</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xs font-semibold text-foreground">{inputData.bitrateCurrent}</span>
+                          <span className="text-[10px] text-muted-foreground">kbps</span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Output Details Accordion */}
+                <AccordionItem value="output-details" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${outputData.streamHealth === 'stable' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Output Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="col-span-2 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Stream Health</span>
+                        <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-bold border ${healthTextColor[outputData.streamHealth]}`}>
+                          {healthText[outputData.streamHealth]}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Settings className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">Modes</span>
+                        </div>
+                        <span className="text-xs font-semibold text-foreground block truncate" title={outputData.modes}>{outputData.modes}</span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Lock className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">Encrypt</span>
+                        </div>
+                        <span className="text-xs font-semibold text-foreground block truncate" title={outputData.encrypted}>{outputData.encrypted}</span>
+                      </div>
+
+                      <div className="col-span-2 p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Layers className="w-3 h-3" />
+                          <span className="text-[10px] font-medium uppercase">Qualities</span>
+                        </div>
+                        <span className="text-xs font-semibold text-foreground block truncate" title={outputData.qualities}>{outputData.qualities}</span>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {/* Event Logs Tab */}
+        <TabsContent value="event-logs" className="flex-1 flex flex-col min-h-0 px-4 pb-4 mt-0 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+            <div className="space-y-4">
+              <Accordion type="multiple" defaultValue={["event-logs-list"]} className="w-full space-y-3">
+                <AccordionItem value="event-logs-list" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Event Logs</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <div className="space-y-2">
+
+
+                      {/* Logs List */}
+                      <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                        {eventLogs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="group flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border/30"
+                          >
+                            <span className="text-[9px] font-medium text-muted-foreground font-mono whitespace-nowrap mt-0.5 bg-background px-1 py-0.5 rounded border border-border/20">
+                              {log.timestamp}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-primary/70">{log.category}</span>
+                                {log.description && (
+                                  <span className="text-[11px] text-foreground font-medium leading-tight">{log.description}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </ScrollArea>
         </TabsContent>
 
         {/* Info Section Tab */}
-        <TabsContent value="info-section" className="flex-1 flex flex-col min-h-0 mt-3 data-[state=active]:flex data-[state=inactive]:hidden">
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-6 pr-2">
-              {/* Live Event Preview */}
-              <div className="relative w-full aspect-video rounded-lg border border-border bg-muted/30 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-destructive mb-2">BREAKING</div>
-                    <div className="text-sm text-muted-foreground">Live Event Preview</div>
-                  </div>
-                </div>
-              </div>
+        <TabsContent value="info-section" className="flex-1 flex flex-col min-h-0 px-4 pb-4 mt-0 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+            <div className="space-y-4">
+              <Accordion type="multiple" defaultValue={["event-details", "ingestion-details", "live-channels"]} className="w-full space-y-3">
+                {/* Event Details Accordion */}
+                <AccordionItem value="event-details" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Event Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <div className="space-y-3">
+                      {/* Live Event Preview */}
+                      <div className="relative w-full aspect-video rounded-lg border border-border/50 bg-muted/30 overflow-hidden shadow-sm group ring-1 ring-white/5">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="text-4xl font-bold text-destructive/50 mb-2 group-hover:text-destructive transition-colors">LIVE</div>
+                            <div className="text-sm font-medium text-muted-foreground">Event Preview</div>
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Event Title and Description */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-foreground flex-1">{eventTitle}</h3>
-                  <div className="flex items-center gap-1">
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip
-                        open={showPreviewTooltip}
-                        onOpenChange={setShowPreviewTooltip}
-                        delayDuration={300}
-                      >
-                        <TooltipTrigger
-                          asChild
-                          onMouseEnter={() => setShowPreviewTooltip(true)}
-                          onMouseLeave={() => setShowPreviewTooltip(false)}
-                          onFocus={(e) => {
-                            e.preventDefault();
-                            e.currentTarget.blur();
-                          }}
-                        >
+                      {/* Event Title and Description */}
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-sm font-semibold text-foreground leading-tight">{eventTitle}</h3>
+                          <div className="flex items-center gap-1">
+                            <TooltipProvider delayDuration={300}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted" onClick={handleOpenPreview}>
+                                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Open Preview</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted">
+                                  <MoreVertical className="w-3 h-3 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={handleInvite}>
+                                  <UserPlus className="w-3.5 h-3.5 mr-2" /> Invite
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleCopyEventUrl}>
+                                  <Copy className="w-3.5 h-3.5 mr-2" /> Copy URL
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{eventDescription}</p>
+
+                        {/* Date and Time */}
+                        <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground pt-2 border-t border-border/50">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3" />
+                            <span>{eventDate}</span>
+                          </div>
+                          <div className="w-1 h-1 rounded-full bg-border" />
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3 h-3" />
+                            <span>{eventTime}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Ingestion Details Accordion */}
+                <AccordionItem value="ingestion-details" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Signal className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Ingestion Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <div className="space-y-3">
+                      {/* Primary RTMP URL */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase">Primary RTMP</label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 relative">
+                            <Input
+                              value={rtmpUrl}
+                              readOnly
+                              className="h-8 text-[10px] font-mono bg-muted/30 border-border/50 pr-8"
+                            />
+                          </div>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={handleOpenPreview}
-                            tabIndex={-1}
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 border-border/50 bg-card hover:bg-accent"
+                            onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            {copiedField === "RTMP URL" ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Open to Preview</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleInvite}>
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Invite
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleCopyEventUrl}>
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy URL
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{eventDescription}</p>
-                
-                {/* Date and Time */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
-                  <span>{eventDate}</span>
-                  <span>•</span>
-                  <span>{eventTime}</span>
-                </div>
-              </div>
+                        </div>
+                      </div>
 
-              {/* Ingestion Details Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Ingestion Details
-                </h3>
+                      {/* Stream Key */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase">Stream Key</label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 relative">
+                            <Input
+                              type={showStreamKey ? "text" : "password"}
+                              value={streamKey}
+                              readOnly
+                              className="h-8 text-[10px] font-mono bg-muted/30 border-border/50"
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 border-border/50 bg-card hover:bg-accent"
+                            onClick={() => setShowStreamKey(!showStreamKey)}
+                          >
+                            {showStreamKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 border-border/50 bg-card hover:bg-accent"
+                            onClick={() => handleCopy(streamKey, "Stream Key")}
+                          >
+                            {copiedField === "Stream Key" ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-                {/* Primary RTMP URL */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Primary RTMP</label>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      value={rtmpUrl}
-                      readOnly
-                      className="flex-1 h-8 text-xs font-mono"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleCopy(rtmpUrl, "RTMP URL")}
-                      title="Copy RTMP URL"
-                    >
-                      {copiedField === "RTMP URL" ? (
-                        <Check className="w-3 h-3 text-primary" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Stream Key */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Stream Key</label>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      type={showStreamKey ? "text" : "password"}
-                      value={streamKey}
-                      readOnly
-                      className="flex-1 h-8 text-xs font-mono"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setShowStreamKey(!showStreamKey)}
-                      title={showStreamKey ? "Hide Stream Key" : "Show Stream Key"}
-                    >
-                      {showStreamKey ? (
-                        <EyeOff className="w-3 h-3" />
-                      ) : (
-                        <Eye className="w-3 h-3" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleCopy(streamKey, "Stream Key")}
-                      title="Copy Stream Key"
-                    >
-                      {copiedField === "Stream Key" ? (
-                        <Check className="w-3 h-3 text-primary" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Channels Section */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Live Channels
-                </h3>
-                <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="SELECT LIVE CHANNEL" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="channel1">Channel 1</SelectItem>
-                    <SelectItem value="channel2">Channel 2</SelectItem>
-                    <SelectItem value="channel3">Channel 3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+                {/* Live Channels Accordion */}
+                <AccordionItem value="live-channels" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Tv className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Live Channels</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                      <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/50">
+                        <SelectValue placeholder="Select Live Channel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="channel1">Channel 1</SelectItem>
+                        <SelectItem value="channel2">Channel 2</SelectItem>
+                        <SelectItem value="channel3">Channel 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </ScrollArea>
         </TabsContent>
 
         {/* Settings Tab */}
-        <TabsContent value="settings" className="flex-1 flex flex-col min-h-0 mt-3 data-[state=active]:flex data-[state=inactive]:hidden">
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-4 pr-2">
-              {/* Features Section */}
-              <div className="space-y-2.5">
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Features
-                </h3>
-                
-                <div className="space-y-2">
-                  {/* Comments */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Comments
-                    </label>
-                    <Switch
-                      checked={commentsEnabled}
-                      onCheckedChange={setCommentsEnabled}
-                    />
-                  </div>
+        <TabsContent value="settings" className="flex-1 flex flex-col min-h-0 px-4 pb-4 mt-0 data-[state=active]:flex data-[state=inactive]:hidden">
+          <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+            <div className="space-y-4">
+              <Accordion type="multiple" defaultValue={["features", "stream-controls"]} className="w-full space-y-3">
+                {/* Features Accordion */}
+                <AccordionItem value="features" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Sliders className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Features</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <div className="space-y-2">
+                      {[
+                        { label: "Comments", checked: commentsEnabled, set: setCommentsEnabled, icon: MessageSquare },
+                        { label: "Live Duration", checked: liveDurationEnabled, set: setLiveDurationEnabled, icon: Clock },
+                        { label: "Audience Count", checked: audienceCountEnabled, set: setAudienceCountEnabled, icon: Users },
+                        { label: "Quick Messages", checked: quickMessagesEnabled, set: setQuickMessagesEnabled, icon: Zap },
+                        { label: "Reactions", checked: reactionsEnabled, set: setReactionsEnabled, icon: Heart },
+                        { label: "Reaction Stats", checked: reactionStatsEnabled, set: setReactionStatsEnabled, icon: BarChart },
+                        { label: "Q&A", checked: qnaEnabled, set: setQnaEnabled, icon: HelpCircle },
+                      ].map((feature, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/30 hover:border-border/50 transition-colors">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1 rounded bg-background text-muted-foreground">
+                              <feature.icon className="w-3 h-3" />
+                            </div>
+                            <label className="text-xs font-medium text-foreground cursor-pointer">
+                              {feature.label}
+                            </label>
+                          </div>
+                          <Switch
+                            checked={feature.checked}
+                            onCheckedChange={feature.set}
+                            className="scale-90"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-                  {/* Live Duration */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Live Duration
-                    </label>
-                    <Switch
-                      checked={liveDurationEnabled}
-                      onCheckedChange={setLiveDurationEnabled}
-                    />
-                  </div>
-
-                  {/* Audience Count */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Audience Count
-                    </label>
-                    <Switch
-                      checked={audienceCountEnabled}
-                      onCheckedChange={setAudienceCountEnabled}
-                    />
-                  </div>
-
-                  {/* Quick Messages */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Quick Messages
-                    </label>
-                    <Switch
-                      checked={quickMessagesEnabled}
-                      onCheckedChange={setQuickMessagesEnabled}
-                    />
-                  </div>
-
-                  {/* Reactions */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Reactions
-                    </label>
-                    <Switch
-                      checked={reactionsEnabled}
-                      onCheckedChange={setReactionsEnabled}
-                    />
-                  </div>
-
-                  {/* Reaction Stats */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      Reaction Stats
-                    </label>
-                    <Switch
-                      checked={reactionStatsEnabled}
-                      onCheckedChange={setReactionStatsEnabled}
-                    />
-                  </div>
-
-                  {/* QnA */}
-                  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card">
-                    <label className="text-sm font-medium text-foreground cursor-pointer">
-                      QnA
-                    </label>
-                    <Switch
-                      checked={qnaEnabled}
-                      onCheckedChange={setQnaEnabled}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Reset Stream Button */}
-              <div className="pt-3 pb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 h-8 text-sm text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => setIsResetStreamDialogOpen(true)}
-                >
-                  <RotateCw className="w-4 h-4" />
-                  Reset Stream
-                </Button>
-              </div>
+                {/* Stream Controls Accordion */}
+                <AccordionItem value="stream-controls" className="border-none bg-card rounded-xl shadow-sm px-3">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <RotateCw className="w-3.5 h-3.5 text-destructive" />
+                      <span className="text-xs font-semibold text-destructive uppercase tracking-wide">Danger Zone</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3 pt-1">
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 h-9 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                      onClick={() => setIsResetStreamDialogOpen(true)}
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                      Reset Stream
+                    </Button>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </ScrollArea>
         </TabsContent>
       </Tabs>
-
-
-
 
       {/* Reset Stream Confirmation Dialog */}
       <AlertDialog open={isResetStreamDialogOpen} onOpenChange={setIsResetStreamDialogOpen}>
@@ -740,19 +781,4 @@ export function LiveModerationPanel({
   );
 }
 
-function Play({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polygon points="5 3 19 12 5 21 5 3" />
-    </svg>
-  );
-}
+

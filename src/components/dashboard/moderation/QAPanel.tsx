@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Copy, Check, Ban, X, ChevronDown, User } from "lucide-react";
+import { Search, Copy, Check, Ban, X, ChevronDown, User, HelpCircle, CheckCircle2, XCircle } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { BlockedUser } from "./ChatModeration";
@@ -246,23 +246,34 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
   }, [filteredQuestions, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full">
-      <Tabs defaultValue="queue" className="flex-1 flex flex-col">
-        <TabsList className="w-full h-6 p-0.5 mb-0">
-          <TabsTrigger value="queue" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Queue</TabsTrigger>
-          <TabsTrigger value="selected" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Selected</TabsTrigger>
-          <TabsTrigger value="closed" className="flex-1 h-5 text-[10px] px-1.5 py-0.5">Skipped</TabsTrigger>
-        </TabsList>
+    <div className="flex flex-col h-full bg-background/50 rounded-xl">
+      <Tabs defaultValue="queue" className="flex-1 flex flex-col h-full">
+        <div className="px-0 pb-2">
+          <TabsList className="w-full bg-muted/50 p-1 h-9">
+            <TabsTrigger value="queue" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <HelpCircle className="w-3 h-3 mr-1.5" />
+              Queue
+            </TabsTrigger>
+            <TabsTrigger value="selected" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <CheckCircle2 className="w-3 h-3 mr-1.5" />
+              Selected
+            </TabsTrigger>
+            <TabsTrigger value="closed" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <XCircle className="w-3 h-3 mr-1.5" />
+              Skipped
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="queue" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden">
+        <TabsContent value="queue" className="flex-1 mt-0 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col">
           {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="relative px-1 mb-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-7 text-xs"
+              className="pl-8 h-7 text-[10px]"
             />
           </div>
 
@@ -284,7 +295,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
                   />
                 ))
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-[10px] text-muted-foreground text-center py-4">
                   No questions in queue.
                 </p>
               )}
@@ -292,21 +303,21 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="selected" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden">
+        <TabsContent value="selected" className="flex-1 mt-0 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col">
           {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="relative px-1 mb-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-7 text-xs"
+              className="pl-8 h-7 text-[10px]"
             />
           </div>
 
           {/* Selected Questions */}
           <ScrollArea className="flex-1 pr-2">
-          <div className="space-y-2">
+            <div className="space-y-2">
               {selectedQuestions.length > 0 ? (
                 selectedQuestions.map((q) => (
                   <SelectedQuestionCard
@@ -322,7 +333,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
                   />
                 ))
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-[10px] text-muted-foreground text-center py-4">
                   No selected questions.
                 </p>
               )}
@@ -330,15 +341,15 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="closed" className="flex-1 flex flex-col mt-1 space-y-2 data-[state=inactive]:hidden" >
+        <TabsContent value="closed" className="flex-1 mt-0 data-[state=inactive]:hidden h-full overflow-hidden flex flex-col" >
           {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="relative px-1 mb-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-7 text-xs"
+              className="pl-8 h-7 text-[10px]"
             />
           </div>
 
@@ -360,7 +371,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
                   />
                 ))
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-[10px] text-muted-foreground text-center py-4">
                   No skipped questions.
                 </p>
               )}
@@ -413,11 +424,10 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
                   <button
                     key={participant}
                     onClick={() => setSelectedParticipant(participant)}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-colors ${
-                      selectedParticipant === participant
+                    className={`w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-colors ${selectedParticipant === participant
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card border-border hover:bg-accent"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <User className="w-3 h-3" />
@@ -467,26 +477,26 @@ function QueueQuestionCard({
 }) {
   const blocked = isUserBlocked(question.username);
   return (
-    <div className="p-2 rounded-lg border border-border bg-card">
+    <div className="p-2 rounded-lg border border-border/50 bg-card hover:border-primary/40 transition-all">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-semibold text-foreground text-xs">{question.username}</span>
-            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
+            <span className="font-bold text-foreground text-[10px]">{question.username}</span>
+            <span className="text-[9px] text-muted-foreground font-mono">{question.timestamp}</span>
             {blocked && (
-              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+              <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
           </div>
-          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+          <p className="text-[10px] text-foreground/90 leading-snug break-words">{question.question}</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0"
+            className="h-6 w-6 p-0"
             onClick={() => onCopy(question.id, question.question)}
             title="Copy"
           >
@@ -499,7 +509,7 @@ function QueueQuestionCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0 text-destructive"
+            className="h-6 w-6 p-0 text-destructive"
             onClick={() => onBlockUser(question.username)}
             title="Block user"
             disabled={blocked}
@@ -512,7 +522,7 @@ function QueueQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1"
+          className="h-6 text-[10px] flex-1"
           onClick={() => onSelect(question.id)}
         >
           Select
@@ -520,7 +530,7 @@ function QueueQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1"
+          className="h-6 text-[10px] flex-1"
           onClick={() => onSkip(question.id)}
         >
           Skip
@@ -528,7 +538,7 @@ function QueueQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1 gap-1"
+          className="h-6 text-[10px] flex-1 gap-1"
           onClick={() => onAssign(question.id)}
         >
           Assign
@@ -560,29 +570,29 @@ function SelectedQuestionCard({
 }) {
   const blocked = isUserBlocked(question.username);
   return (
-    <div className="p-2 rounded-lg border border-border bg-card">
+    <div className="p-2 rounded-lg border border-primary/30 bg-primary/5">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-semibold text-foreground text-xs">{question.username}</span>
-            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
+            <span className="font-bold text-foreground text-[10px]">{question.username}</span>
+            <span className="text-[9px] text-muted-foreground font-mono">{question.timestamp}</span>
             {blocked && (
-              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+              <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
-            <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            <span className="ml-auto text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
               SELECTED
             </span>
           </div>
-          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+          <p className="text-[10px] text-foreground/90 leading-snug break-words">{question.question}</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0"
+            className="h-6 w-6 p-0"
             onClick={() => onCopy(question.id, question.question)}
             title="Copy"
           >
@@ -595,7 +605,7 @@ function SelectedQuestionCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0 text-destructive"
+            className="h-6 w-6 p-0 text-destructive"
             onClick={() => onBlockUser(question.username)}
             title="Block user"
             disabled={blocked}
@@ -608,7 +618,7 @@ function SelectedQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1"
+          className="h-6 text-[10px] flex-1"
           onClick={() => onQueue(question.id)}
         >
           Queue
@@ -616,7 +626,7 @@ function SelectedQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1"
+          className="h-6 text-[10px] flex-1"
           onClick={() => onSkip(question.id)}
         >
           Skip
@@ -624,7 +634,7 @@ function SelectedQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1 gap-1"
+          className="h-6 text-[10px] flex-1 gap-1"
           onClick={() => onAssign(question.id)}
         >
           Assign
@@ -656,29 +666,29 @@ function ClosedQuestionCard({
 }) {
   const blocked = isUserBlocked(question.username);
   return (
-    <div className="p-2 rounded-lg border border-border bg-card">
+    <div className="p-2 rounded-lg border border-border/50 bg-muted/30 opacity-70 hover:opacity-100 transition-opacity">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-semibold text-foreground text-xs">{question.username}</span>
-            <span className="text-[10px] text-muted-foreground">{question.timestamp}</span>
+            <span className="font-bold text-foreground text-[10px]">{question.username}</span>
+            <span className="text-[9px] text-muted-foreground font-mono">{question.timestamp}</span>
             {blocked && (
-              <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
+              <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
-            <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            <span className="ml-auto text-[9px] text-muted-foreground font-bold uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
               SKIPPED
             </span>
           </div>
-          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+          <p className="text-[10px] text-foreground/90 leading-snug break-words">{question.question}</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0"
+            className="h-6 w-6 p-0"
             onClick={() => onCopy(question.id, question.question)}
             title="Copy"
           >
@@ -691,7 +701,7 @@ function ClosedQuestionCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0 text-destructive"
+            className="h-6 w-6 p-0 text-destructive"
             onClick={() => onBlockUser(question.username)}
             title="Block user"
             disabled={blocked}
@@ -704,7 +714,7 @@ function ClosedQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1"
+          className="h-6 text-[10px] flex-1"
           onClick={() => onSelect(question.id)}
         >
           Select
@@ -712,7 +722,7 @@ function ClosedQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1"
+          className="h-6 text-[10px] flex-1"
           onClick={() => onQueue(question.id)}
         >
           Queue
@@ -720,7 +730,7 @@ function ClosedQuestionCard({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs flex-1 gap-1"
+          className="h-6 text-[10px] flex-1 gap-1"
           onClick={() => onAssign(question.id)}
         >
           Assign
@@ -751,11 +761,10 @@ function QuestionCard({
   const blocked = isUserBlocked(question.username);
   return (
     <div
-      className={`group p-2 rounded-lg surface-elevated border transition-all ${
-        question.isApproved
+      className={`group p-2 rounded-lg surface-elevated border transition-all ${question.isApproved
           ? "border-success/30 bg-success/5"
           : "border-border hover:border-primary/50"
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">

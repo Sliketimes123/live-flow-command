@@ -736,8 +736,8 @@ export function LiveModerationPanel({
                 <AccordionItem value="stream-controls" className="border-none bg-card rounded-xl shadow-sm px-3">
                   <AccordionTrigger className="py-2 hover:no-underline">
                     <div className="flex items-center gap-2">
-                      <RotateCw className="w-3.5 h-3.5 text-destructive" />
-                      <span className="text-xs font-semibold text-destructive uppercase tracking-wide">Danger Zone</span>
+                      <RotateCw className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Manage Stream</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-3 pt-1">

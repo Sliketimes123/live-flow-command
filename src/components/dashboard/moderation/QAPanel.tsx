@@ -574,19 +574,19 @@ function SelectedQuestionCard({
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-bold text-foreground text-[10px]">{question.username}</span>
-            <span className="text-[9px] text-muted-foreground font-mono">{question.timestamp}</span>
+            <span className="font-bold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{question.timestamp}</span>
             {blocked && (
-              <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
+              <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
             <span className="ml-auto text-[10px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
               SELECTED
             </span>
           </div>
-          <p className="text-[10px] text-foreground/90 leading-snug break-words">{question.question}</p>
+          <p className="text-xs text-foreground/90 leading-snug break-words">{question.question}</p>
         </div>
         <div className="flex items-center gap-0.5">
           <Button
@@ -670,19 +670,19 @@ function ClosedQuestionCard({
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-bold text-foreground text-[10px]">{question.username}</span>
-            <span className="text-[9px] text-muted-foreground font-mono">{question.timestamp}</span>
+            <span className="font-bold text-foreground text-xs">{question.username}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{question.timestamp}</span>
             {blocked && (
-              <span className="text-[9px] text-destructive font-medium uppercase">(Blocked)</span>
+              <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[9px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
             )}
             <span className="ml-auto text-[10px] text-muted-foreground font-bold uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
               SKIPPED
             </span>
           </div>
-          <p className="text-[10px] text-foreground/90 leading-snug break-words">{question.question}</p>
+          <p className="text-xs text-foreground/90 leading-snug break-words">{question.question}</p>
         </div>
         <div className="flex items-center gap-0.5">
           <Button

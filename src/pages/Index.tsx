@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatusBar } from "@/components/dashboard/StatusBar";
 import { LiveModerationPanel } from "@/components/dashboard/LiveModerationPanel";
@@ -6,6 +7,7 @@ import { EventModerationPanel } from "@/components/dashboard/EventModerationPane
 import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation/ChatModeration";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [isLive, setIsLive] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedTime, setElapsedTime] = useState("00:45:32");
@@ -17,6 +19,10 @@ const Index = () => {
   const [concurrentUsers, setConcurrentUsers] = useState(3);
   const [totalUsers, setTotalUsers] = useState(9);
   const [isRecording, setIsRecording] = useState(false);
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
+  const [audienceCountEnabled, setAudienceCountEnabled] = useState(true);
+  const [reactionsEnabled, setReactionsEnabled] = useState(true);
+  const [qnaEnabled, setQnaEnabled] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -87,6 +93,7 @@ const Index = () => {
   const handleStop = () => {
     setIsLive(false);
     setIsPaused(false);
+    setIsRecording(false);
   };
 
   const handlePause = () => {
@@ -104,8 +111,19 @@ const Index = () => {
   };
 
   const handleBack = () => {
-    console.log("Back clicked");
-    // Add navigation logic here if needed
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/");
+  };
+
+  const handleClose = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/");
   };
 
   const handleStartRecording = () => {
@@ -180,6 +198,7 @@ const Index = () => {
         elapsedTime={elapsedTime}
         concurrentUsers={concurrentUsers}
         totalUsers={totalUsers}
+        audienceCountEnabled={audienceCountEnabled}
         isRecording={isRecording}
         onStart={handleStart}
         onStop={handleStop}
@@ -189,6 +208,7 @@ const Index = () => {
         onStartRecording={handleStartRecording}
         onEndEvent={handleEndEvent}
         onBack={handleBack}
+        onClose={handleClose}
       />
 
       {/* Main Content */}
@@ -207,6 +227,14 @@ const Index = () => {
             eventTime={new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
             rtmpUrl="rtmp://studio-vwfeyv.sli.ke/live/"
             streamKey="npn57eigzo"
+            commentsEnabled={commentsEnabled}
+            audienceCountEnabled={audienceCountEnabled}
+            reactionsEnabled={reactionsEnabled}
+            qnaEnabled={qnaEnabled}
+            onCommentsEnabledChange={setCommentsEnabled}
+            onAudienceCountEnabledChange={setAudienceCountEnabled}
+            onReactionsEnabledChange={setReactionsEnabled}
+            onQnaEnabledChange={setQnaEnabled}
           />
         </aside>
 
@@ -221,6 +249,8 @@ const Index = () => {
             onToggleSelect={handleToggleSelect}
             onCopy={handleCopy}
             onDeleteMessage={handleDeleteMessage}
+            commentsEnabled={commentsEnabled}
+            qnaEnabled={qnaEnabled}
           />
         </section>
       </main>
@@ -242,6 +272,9 @@ const Index = () => {
         chatMessageCount={chatMessageCount}
         qaCount={qaCount}
         reactionsCount={reactionsCount}
+        commentsEnabled={commentsEnabled}
+        qnaEnabled={qnaEnabled}
+        reactionsEnabled={reactionsEnabled}
       />
     </div>
   );

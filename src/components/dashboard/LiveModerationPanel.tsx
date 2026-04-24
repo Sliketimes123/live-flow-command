@@ -62,6 +62,14 @@ interface LiveModerationPanelProps {
   eventTime?: string;
   rtmpUrl?: string;
   streamKey?: string;
+  commentsEnabled?: boolean;
+  audienceCountEnabled?: boolean;
+  reactionsEnabled?: boolean;
+  qnaEnabled?: boolean;
+  onCommentsEnabledChange?: (enabled: boolean) => void;
+  onAudienceCountEnabledChange?: (enabled: boolean) => void;
+  onReactionsEnabledChange?: (enabled: boolean) => void;
+  onQnaEnabledChange?: (enabled: boolean) => void;
 }
 
 interface EventLog {
@@ -90,6 +98,14 @@ export function LiveModerationPanel({
   eventTime = "11:09 AM",
   rtmpUrl = "rtmp://studio-vwfeyv.sli.ke/live/",
   streamKey = "npn57eigzo",
+  commentsEnabled = true,
+  audienceCountEnabled = true,
+  reactionsEnabled = true,
+  qnaEnabled = true,
+  onCommentsEnabledChange,
+  onAudienceCountEnabledChange,
+  onReactionsEnabledChange,
+  onQnaEnabledChange,
 }: LiveModerationPanelProps) {
   const [viewType, setViewType] = useState<"input" | "output">("input");
   const [activeMainTab, setActiveMainTab] = useState<string>("event-health");
@@ -103,13 +119,9 @@ export function LiveModerationPanel({
   const [autoPublish, setAutoPublish] = useState(false);
 
   // Settings toggles
-  const [commentsEnabled, setCommentsEnabled] = useState(true);
   const [liveDurationEnabled, setLiveDurationEnabled] = useState(false);
-  const [audienceCountEnabled, setAudienceCountEnabled] = useState(false);
   const [quickMessagesEnabled, setQuickMessagesEnabled] = useState(false);
-  const [reactionsEnabled, setReactionsEnabled] = useState(true);
   const [reactionStatsEnabled, setReactionStatsEnabled] = useState(true);
-  const [qnaEnabled, setQnaEnabled] = useState(true);
 
   const { toast } = useToast();
 
@@ -704,13 +716,13 @@ export function LiveModerationPanel({
                   <AccordionContent className="pb-3 pt-1">
                     <div className="space-y-2">
                       {[
-                        { label: "Comments", checked: commentsEnabled, set: setCommentsEnabled, icon: MessageSquare },
+                        { label: "Comments", checked: commentsEnabled, set: onCommentsEnabledChange ?? (() => undefined), icon: MessageSquare },
                         { label: "Live Duration", checked: liveDurationEnabled, set: setLiveDurationEnabled, icon: Clock },
-                        { label: "Audience Count", checked: audienceCountEnabled, set: setAudienceCountEnabled, icon: Users },
+                        { label: "Audience Count", checked: audienceCountEnabled, set: onAudienceCountEnabledChange ?? (() => undefined), icon: Users },
                         { label: "Quick Messages", checked: quickMessagesEnabled, set: setQuickMessagesEnabled, icon: Zap },
-                        { label: "Reactions", checked: reactionsEnabled, set: setReactionsEnabled, icon: Heart },
+                        { label: "Reactions", checked: reactionsEnabled, set: onReactionsEnabledChange ?? (() => undefined), icon: Heart },
                         { label: "Reaction Stats", checked: reactionStatsEnabled, set: setReactionStatsEnabled, icon: BarChart },
-                        { label: "Q&A", checked: qnaEnabled, set: setQnaEnabled, icon: HelpCircle },
+                        { label: "Q&A", checked: qnaEnabled, set: onQnaEnabledChange ?? (() => undefined), icon: HelpCircle },
                       ].map((feature, i) => (
                         <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/30 hover:border-border/50 transition-colors">
                           <div className="flex items-center gap-2.5">

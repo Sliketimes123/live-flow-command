@@ -1,4 +1,4 @@
-import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, HelpCircle, Heart, Users, Radio, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
+import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, HelpCircle, Heart, Radio, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -53,6 +53,9 @@ interface StatusBarProps {
   chatMessageCount?: number;
   qaCount?: number;
   reactionsCount?: number;
+  commentsEnabled?: boolean;
+  qnaEnabled?: boolean;
+  reactionsEnabled?: boolean;
 }
 
 export function StatusBar({
@@ -71,10 +74,12 @@ export function StatusBar({
   chatMessageCount,
   qaCount = 0,
   reactionsCount = 0,
+  commentsEnabled = true,
+  qnaEnabled = true,
+  reactionsEnabled = true,
 }: StatusBarProps) {
   const [isBlockUserDialogOpen, setIsBlockUserDialogOpen] = useState(false);
   const [isSelectedChatDialogOpen, setIsSelectedChatDialogOpen] = useState(false);
-  const [isActiveUsersDialogOpen, setIsActiveUsersDialogOpen] = useState(false);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,42 +123,14 @@ export function StatusBar({
     setHasSelectedChatActions(true);
   };
 
-  // Get all unique users from messages and blocked users
-  const allUsers = useMemo(() => {
-    const uniqueUsers = new Map<string, { username: string; isActive: boolean }>();
-    const blockedUsernames = new Set(blockedUsers.map((bu) => bu.username));
-    
-    // Add users from messages
-    messages.forEach((msg) => {
-      if (!uniqueUsers.has(msg.username)) {
-        uniqueUsers.set(msg.username, {
-          username: msg.username,
-          isActive: !blockedUsernames.has(msg.username),
-        });
-      }
-    });
-    
-    // Add users from blockedUsers list (includes users blocked from Q&A)
-    blockedUsers.forEach((bu) => {
-      if (!uniqueUsers.has(bu.username)) {
-        uniqueUsers.set(bu.username, {
-          username: bu.username,
-          isActive: false, // They're blocked, so not active
-        });
-      }
-    });
-    
-    return Array.from(uniqueUsers.values());
-  }, [messages, blockedUsers]);
-
-  // Filter users based on search query
+  // Filter blocked users based on search query
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) {
-      return allUsers;
+      return blockedUsers;
     }
     const query = searchQuery.toLowerCase();
-    return allUsers.filter((user) => user.username.toLowerCase().includes(query));
-  }, [allUsers, searchQuery]);
+    return blockedUsers.filter((user) => user.username.toLowerCase().includes(query));
+  }, [blockedUsers, searchQuery]);
 
   // Get selected messages
   const selectedMessages = useMemo(() => {
@@ -270,7 +247,7 @@ export function StatusBar({
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1.5 cursor-default opacity-70">
-                <Radio className="w-3.5 h-3.5 text-muted-foreground" />
+                <Activity className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded ${healthColor[outputData.streamHealth]}`}>
                   {healthText[outputData.streamHealth]}
                 </span>
@@ -424,38 +401,122 @@ export function StatusBar({
         </Dialog>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Selected Chat Button */}
-        <Dialog open={isSelectedChatDialogOpen} onOpenChange={(open) => {
-          setIsSelectedChatDialogOpen(open);
-          if (!open) {
-            setHasSelectedChatActions(false);
-          }
-        }}>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer"
-                >
-                  <Star className="w-3.5 h-3.5" />
-              {selectedMessages.length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
-                  {selectedMessages.length}
-                </span>
-              )}
-            </Button>
-          </DialogTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Selected Chat</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col [&>button]:hidden">
+      <div className="ml-auto flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {commentsEnabled && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
+                      disabled
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
+                        {totalChatMessages}
+                      </span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Total Chat</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {commentsEnabled && (qnaEnabled || reactionsEnabled) && <div className="h-4 w-px bg-border mx-1" />}
+
+          {qnaEnabled && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
+                      disabled
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
+                        {qaCount}
+                      </span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Total Q&A</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {qnaEnabled && reactionsEnabled && <div className="h-4 w-px bg-border mx-1" />}
+
+          {reactionsEnabled && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
+                      disabled
+                    >
+                      <Heart className="w-3.5 h-3.5" />
+                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
+                        {reactionsCount}
+                      </span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Total reactions</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+
+        <div className="h-5 w-px bg-border" />
+
+        <div className="flex items-center gap-3">
+          {commentsEnabled && (
+            <Dialog open={isSelectedChatDialogOpen} onOpenChange={(open) => {
+              setIsSelectedChatDialogOpen(open);
+              if (!open) {
+                setHasSelectedChatActions(false);
+              }
+            }}>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer"
+                      >
+                        <Star className="w-3.5 h-3.5" />
+                        {selectedMessages.length > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                            {selectedMessages.length}
+                          </span>
+                        )}
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Selected Chat</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col [&>button]:hidden">
             <DialogHeader>
               <DialogTitle>Selected Chats</DialogTitle>
               <DialogDescription>
@@ -530,169 +591,38 @@ export function StatusBar({
                 setHasSelectedChatActions(false);
               }}>Close</Button>
             </div>
-          </DialogContent>
-        </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
 
-        {/* Chat Messages Summary */}
-        <TooltipProvider delayDuration={300}>
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-        <Button
-          variant="outline"
-          size="sm"
-                  className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
-          disabled
-        >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
-            {totalChatMessages}
-          </span>
-        </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Total Chat</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+          {commentsEnabled && <div className="h-4 w-px bg-border mx-1" />}
 
-        <div className="h-4 w-px bg-border mx-1" />
-
-        {/* Q&A Summary - Non-clickable */}
-        <TooltipProvider delayDuration={300}>
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-        <Button
-          variant="outline"
-          size="sm"
-                  className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
-          disabled
-        >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
-            {qaCount}
-          </span>
-        </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Total Q&A</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <div className="h-4 w-px bg-border mx-1" />
-
-        {/* Reactions Summary - Non-clickable */}
-        <TooltipProvider delayDuration={300}>
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-        <Button
-          variant="outline"
-          size="sm"
-                  className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
-          disabled
-        >
-                  <Heart className="w-3.5 h-3.5" />
-                  <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
-            {reactionsCount}
-          </span>
-        </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Total reactions</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <div className="h-4 w-px bg-border mx-1" />
-
-        {/* Active Users Button */}
-        <Dialog open={isActiveUsersDialogOpen} onOpenChange={setIsActiveUsersDialogOpen}>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer">
-                    <Users className="w-3.5 h-3.5" />
-                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
-                3
-              </span>
-            </Button>
-          </DialogTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Active Users</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col [&>button]:hidden">
-            <DialogHeader>
-              <DialogTitle>Active Users</DialogTitle>
-              <DialogDescription>
-                View all active users currently participating in the event.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4 flex-1 flex flex-col min-h-0">
-              <ScrollArea className="flex-1 w-full rounded-md border">
-                <div className="space-y-2 p-2.5">
-                  {["Moderator_Alpha", "Moderator_Beta", "Moderator_Gamma"].map((mod, index) => (
-                    <div key={mod} className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-primary">
-                          {mod.charAt(mod.indexOf("_") + 1)}
+          {/* Block User Button */}
+          <Dialog open={isBlockUserDialogOpen} onOpenChange={setIsBlockUserDialogOpen}>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer">
+                      <Ban className="w-3.5 h-3.5" />
+                      {blockedUsers.length > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                          {blockedUsers.length}
                         </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground">{mod}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {15 + index * 5} actions today
-                        </p>
-                      </div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-glow flex-shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-            <div className="mt-4 flex justify-end border-t pt-4">
-              <Button onClick={() => setIsActiveUsersDialogOpen(false)}>Close</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <div className="h-4 w-px bg-border mx-1" />
-
-        {/* Block User Button */}
-        <Dialog open={isBlockUserDialogOpen} onOpenChange={setIsBlockUserDialogOpen}>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-        <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer">
-                    <Ban className="w-3.5 h-3.5" />
-            {blockedUsers.length > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
-                {blockedUsers.length}
-              </span>
-            )}
-          </Button>
-        </DialogTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Block User</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col [&>button]:hidden">
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Block User</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col [&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Block / Unblock Users</DialogTitle>
             <DialogDescription>
-              Manage user access. Block users to restrict their participation or unblock them to restore access.
+              View and manage blocked users. Unblock users to restore their participation.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex-1 flex flex-col min-h-0">
@@ -700,7 +630,7 @@ export function StatusBar({
             <div className="relative mb-4">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search users..."
+                placeholder="Search blocked users..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 h-7 text-xs"
@@ -708,14 +638,12 @@ export function StatusBar({
             </div>
             {filteredUsers.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">
-                {searchQuery.trim() ? "No users found matching your search." : "No users found."}
+                {searchQuery.trim() ? "No blocked users found matching your search." : "No blocked users."}
               </p>
             ) : (
               <ScrollArea className="flex-1 w-full rounded-md border">
                 <div className="space-y-1.5 p-2.5">
                   {filteredUsers.map((user) => {
-                    const isBlocked = isUserBlocked(user.username);
-                    const blockedUserInfo = blockedUsers.find((bu) => bu.username === user.username);
                     return (
                       <div
                         key={user.username}
@@ -724,29 +652,17 @@ export function StatusBar({
                         <div className="flex-1">
                           <p className="font-semibold text-foreground text-xs">{user.username}</p>
                           <p className="text-[11px] text-muted-foreground">
-                            {isBlocked ? `Blocked at ${blockedUserInfo?.blockedAt || "N/A"}` : "Active"}
+                            {`Blocked at ${user.blockedAt || "N/A"}`}
                           </p>
                         </div>
-                        {isBlocked ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onUnblockUser(user.username)}
-                            className="gap-1 h-7 text-xs px-2"
-                          >
-                            Unblock
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleBlockRequest(user.username)}
-                            className="gap-1 h-7 text-xs px-2"
-                          >
-                            <Ban className="w-3 h-3" />
-                            Block
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onUnblockUser(user.username)}
+                          className="gap-1 h-7 text-xs px-2"
+                        >
+                          Unblock
+                        </Button>
                       </div>
                     );
                   })}
@@ -760,8 +676,9 @@ export function StatusBar({
               setSearchQuery("");
             }}>Close</Button>
           </div>
-        </DialogContent>
-      </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       </footer>
 

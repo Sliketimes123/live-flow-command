@@ -49,6 +49,7 @@ interface QAPanelProps {
 }
 
 export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
+  const [activeTab, setActiveTab] = useState<"queue" | "selected" | "closed">("queue");
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedQuestionId, setCopiedQuestionId] = useState<string | null>(null);
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
@@ -174,13 +175,13 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
       setQuestions((prev) =>
         prev.map((q) =>
           q.id === selectedQuestionForAssign
-            ? { ...q, assignedTo: selectedParticipant }
+            ? { ...q, assignedTo: selectedParticipant, status: "selected" as const }
             : q
         )
       );
       toast({
         title: "Question Assigned",
-        description: `Question assigned to ${selectedParticipant}`,
+        description: `Question moved to Selected and assigned to ${selectedParticipant}`,
       });
       setIsAssignDialogOpen(false);
       setSelectedQuestionForAssign(null);
@@ -247,7 +248,7 @@ export function QAPanel({ onBlockUser, blockedUsers = [] }: QAPanelProps) {
 
   return (
     <div className="flex flex-col h-full bg-background/50 rounded-xl">
-      <Tabs defaultValue="queue" className="flex-1 flex flex-col h-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "queue" | "selected" | "closed")} className="flex-1 flex flex-col h-full">
         <div className="px-0 pb-1">
           <TabsList className="w-full bg-muted/50 p-1 h-9">
             <TabsTrigger value="queue" className="flex-1 text-[10px] h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -487,7 +488,7 @@ function QueueQuestionCard({
               <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[10px] text-primary font-medium">Assigned to ({question.assignedTo})</span>
             )}
           </div>
           <p className="text-xs text-foreground/90 leading-snug break-words">{question.question}</p>
@@ -570,7 +571,7 @@ function SelectedQuestionCard({
 }) {
   const blocked = isUserBlocked(question.username);
   return (
-    <div className="p-2 rounded-lg border border-primary/30 bg-primary/5">
+    <div className="p-2 rounded-lg border border-border/50 bg-card">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
@@ -580,7 +581,7 @@ function SelectedQuestionCard({
               <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[10px] text-primary font-medium">Assigned to ({question.assignedTo})</span>
             )}
             <span className="ml-auto text-[10px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
               SELECTED
@@ -619,27 +620,31 @@ function SelectedQuestionCard({
           size="sm"
           variant="outline"
           className="h-6 text-[10px] flex-1"
-          onClick={() => onQueue(question.id)}
-        >
-          Queue
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-6 text-[10px] flex-1"
           onClick={() => onSkip(question.id)}
         >
           Skip
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-6 text-[10px] flex-1 gap-1"
-          onClick={() => onAssign(question.id)}
-        >
-          Assign
-          <ChevronDown className="w-3 h-3" />
-        </Button>
+        {!question.assignedTo && (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-[10px] flex-1"
+              onClick={() => onQueue(question.id)}
+            >
+              Queue
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-[10px] flex-1 gap-1"
+              onClick={() => onAssign(question.id)}
+            >
+              Assign
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -676,7 +681,7 @@ function ClosedQuestionCard({
               <span className="text-[10px] text-destructive font-medium uppercase">(Blocked)</span>
             )}
             {question.assignedTo && (
-              <span className="text-[10px] text-primary font-medium">(Assigned to {question.assignedTo})</span>
+              <span className="text-[10px] text-primary font-medium">Assigned to ({question.assignedTo})</span>
             )}
             <span className="ml-auto text-[10px] text-muted-foreground font-bold uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
               SKIPPED

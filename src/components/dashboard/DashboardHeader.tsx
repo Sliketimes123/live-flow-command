@@ -33,6 +33,7 @@ interface DashboardHeaderProps {
   elapsedTime: string;
   concurrentUsers: number;
   totalUsers: number;
+  audienceCountEnabled?: boolean;
   isRecording: boolean;
   onStart: () => void;
   onStop: () => void;
@@ -42,6 +43,7 @@ interface DashboardHeaderProps {
   onStartRecording: () => void;
   onEndEvent: () => void;
   onBack?: () => void;
+  onClose?: () => void;
 }
 
 export function DashboardHeader({
@@ -52,6 +54,7 @@ export function DashboardHeader({
   elapsedTime,
   concurrentUsers,
   totalUsers,
+  audienceCountEnabled = true,
   isRecording,
   onStart,
   onStop,
@@ -61,9 +64,16 @@ export function DashboardHeader({
   onStartRecording,
   onEndEvent,
   onBack,
+  onClose,
 }: DashboardHeaderProps) {
+  const liveControlItemClass = "gap-2.5";
+  const liveControlIconClass = "w-3.5 h-3.5 shrink-0";
+  const endEventMenuItemClass =
+    "text-destructive/90 hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive transition-colors";
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEndEventDialogOpen, setIsEndEventDialogOpen] = useState(false);
+  const [isRecordingDialogOpen, setIsRecordingDialogOpen] = useState(false);
+  const [recordingAction, setRecordingAction] = useState<"start" | "stop">("start");
   const { toast } = useToast();
 
   const handleCopy = async (text: string, fieldName: string) => {
@@ -84,6 +94,16 @@ export function DashboardHeader({
     }
   };
 
+  const handleRecordingClick = () => {
+    if (isRecording) {
+      setRecordingAction("stop");
+      setIsRecordingDialogOpen(true);
+      return;
+    }
+    setRecordingAction("start");
+    setIsRecordingDialogOpen(true);
+  };
+
   return (
     <header className="h-12 border-b border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -91,10 +111,10 @@ export function DashboardHeader({
           onClick={onBack}
           variant="ghost"
           size="sm"
-          className="h-7 w-7 p-0"
+          className="group h-7 w-7 p-0"
           title="Go back"
         >
-          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+          <ChevronLeft className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-white group-focus-visible:text-white" />
         </Button>
         <div className="h-4 w-px bg-border" />
         <h1 className="text-sm font-semibold text-foreground">{eventTitle}</h1>
@@ -132,16 +152,18 @@ export function DashboardHeader({
 
       <div className="flex items-center gap-3">
         {/* User Counts */}
-        <div className="flex items-center gap-4 border-r border-border pr-4">
-          <div className="flex items-center gap-1.5">
-            <Eye className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs font-semibold text-foreground">{concurrentUsers}</span>
+        {audienceCountEnabled && (
+          <div className="flex items-center gap-4 border-r border-border pr-4">
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground">{concurrentUsers}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground">{totalUsers}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs font-semibold text-foreground">{totalUsers}</span>
-          </div>
-        </div>
+        )}
 
         {/* Live Status and Timer */}
         <div className="flex items-center gap-3 border-r border-border pr-4">
@@ -165,8 +187,8 @@ export function DashboardHeader({
         {/* Action Buttons */}
         <div className="flex items-center">
           <button
-            onClick={onStartRecording}
-            className="h-7 px-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleRecordingClick}
+            className="h-7 px-3 rounded-md text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!isLive && !isPaused}
           >
             {isRecording ? "STOP REC" : "START REC"}
@@ -184,19 +206,19 @@ export function DashboardHeader({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onPause}>
-                  <Pause className="w-3 h-3 mr-2" />
+                <DropdownMenuItem onClick={onPause} className={liveControlItemClass}>
+                  <Pause className={liveControlIconClass} />
                   Pause Live
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onStop}>
-                  <Square className="w-3 h-3 mr-2" />
+                <DropdownMenuItem onClick={onStop} className={liveControlItemClass}>
+                  <Square className={liveControlIconClass} />
                   Stop Live
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setIsEndEventDialogOpen(true)}
-                  className="text-destructive focus:text-destructive"
+                  className={`${liveControlItemClass} ${endEventMenuItemClass}`}
                 >
-                  <X className="w-3 h-3 mr-2" />
+                  <X className={liveControlIconClass} />
                   End Event
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -211,19 +233,19 @@ export function DashboardHeader({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onStop}>
-                  <Square className="w-3 h-3 mr-2" />
+                <DropdownMenuItem onClick={onStop} className={liveControlItemClass}>
+                  <Square className={liveControlIconClass} />
                   Stop Live
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onResume}>
-                  <Play className="w-3 h-3 mr-2" />
+                <DropdownMenuItem onClick={onResume} className={liveControlItemClass}>
+                  <Play className={liveControlIconClass} />
                   Start Live
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setIsEndEventDialogOpen(true)}
-                  className="text-destructive focus:text-destructive"
+                  className={`${liveControlItemClass} ${endEventMenuItemClass}`}
                 >
-                  <X className="w-3 h-3 mr-2" />
+                  <X className={liveControlIconClass} />
                   End Event
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -238,6 +260,16 @@ export function DashboardHeader({
             </button>
           )}
         </div>
+        <div className="h-4 w-px bg-border" />
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          size="sm"
+          className="group h-7 w-7 p-0"
+          title="Close page"
+        >
+          <X className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-white group-focus-visible:text-white" />
+        </Button>
       </div>
 
       {/* End Event Warning Dialog */}
@@ -255,6 +287,30 @@ export function DashboardHeader({
               onClick={() => {
                 setIsEndEventDialogOpen(false);
                 onEndEvent();
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              CONFIRM
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Recording Warning Dialog */}
+      <AlertDialog open={isRecordingDialogOpen} onOpenChange={setIsRecordingDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Warning!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure, you want to {recordingAction === "start" ? "Start" : "Stop"} Recording?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsRecordingDialogOpen(false);
+                onStartRecording();
               }}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >

@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -13,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Star, EyeOff, Copy, Check, Trash2, Send, User, Ban, MessageSquare } from "lucide-react";
+import { Search, Star, Eye, EyeOff, Copy, Check, Trash2, ArrowRight, User, Ban, MessageSquare, Pin, PinOff } from "lucide-react";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -77,6 +76,8 @@ export function ChatModeration({
   // Default to disabled (false)
   const [internalAutoScroll, setInternalAutoScroll] = useState(false);
   const [internalStudioAutoScroll, setInternalStudioAutoScroll] = useState(false);
+  const [showHiddenComments, setShowHiddenComments] = useState(false);
+  const [showHiddenStudio, setShowHiddenStudio] = useState(false);
 
   // Use prop if provided for the active tab, otherwise fall back to internal state
   const autoScroll = activeTab === "comments" && propAutoScroll !== undefined
@@ -221,7 +222,7 @@ export function ChatModeration({
   const filteredMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return messages
-      .filter((msg) => !msg.isHidden)
+      .filter((msg) => showHiddenComments || !msg.isHidden)
       .filter((msg) => {
         if (!query) return true;
         return (
@@ -235,12 +236,12 @@ export function ChatModeration({
         if (!a.isSelected && b.isSelected) return 1;
         return 0;
       });
-  }, [messages, searchQuery]);
+  }, [messages, searchQuery, showHiddenComments]);
 
   const filteredStudioMessages = useMemo(() => {
     const query = studioSearchQuery.trim().toLowerCase();
     return studioMessages
-      .filter((msg) => !msg.isHidden)
+      .filter((msg) => showHiddenStudio || !msg.isHidden)
       .filter((msg) => {
         if (!query) return true;
         return (
@@ -254,7 +255,7 @@ export function ChatModeration({
         if (!a.isSelected && b.isSelected) return 1;
         return 0;
       });
-  }, [studioMessages, studioSearchQuery]);
+  }, [studioMessages, studioSearchQuery, showHiddenStudio]);
 
   const handleStartPrivateChat = (username: string) => {
     const existingChat = privateChats.find((chat) => chat.username === username);
@@ -372,7 +373,7 @@ export function ChatModeration({
               <Button
                 size="sm"
                 variant={autoScroll ? "default" : "outline"}
-                className="h-7 w-7 p-0"
+                className="group h-7 w-7 p-0"
                 onClick={() => {
                   const newAutoScroll = !autoScroll;
                   handleAutoScrollChange(newAutoScroll);
@@ -385,12 +386,29 @@ export function ChatModeration({
                 <img
                   src="/auto-scroll-icon.svg"
                   alt="Auto scroll"
-                  className="w-3 h-3"
+                  className="w-3 h-3 transition-all duration-200 ease-out group-hover:brightness-0 group-hover:invert group-focus-visible:brightness-0 group-focus-visible:invert"
                 />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>{autoScroll ? "Auto scroll enabled" : "Auto scroll disabled"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant={showHiddenComments ? "default" : "outline"}
+                className="h-7 px-2 text-[10px]"
+                onClick={() => setShowHiddenComments((prev) => !prev)}
+              >
+                {showHiddenComments ? "Hide hidden" : "Show hidden"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{showHiddenComments ? "Showing hidden messages" : "Hidden messages are filtered out"}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -412,7 +430,7 @@ export function ChatModeration({
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <div className="flex items-center flex-wrap gap-1.5">
                         {msg.isSelected && (
-                          <Star className="w-3 h-3 text-primary fill-primary" />
+                          <Pin className="w-3 h-3 text-primary" />
                         )}
                         <span className="font-bold text-foreground text-xs">
                           {msg.username}
@@ -438,20 +456,22 @@ export function ChatModeration({
                         variant="ghost"
                         className="h-6 w-6 p-0"
                         onClick={() => handleToggleHide(msg.id)}
-                        title="Hide"
+                        title={msg.isHidden ? "Unhide" : "Hide"}
                       >
-                        <EyeOff className="w-3 h-3" />
+                        {msg.isHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0"
+                        className="group/unpin h-6 w-6 p-0"
                         onClick={() => handleToggleSelect(msg.id)}
-                        title={msg.isSelected ? "Unselect" : "Select"}
+                        title={msg.isSelected ? "Unpin" : "Pin"}
                       >
-                        <Star
-                          className={`w-3 h-3 ${msg.isSelected ? "text-primary fill-primary" : ""}`}
-                        />
+                        {msg.isSelected ? (
+                          <PinOff className="w-3 h-3 !text-black transition-colors group-hover/unpin:!text-white group-focus-visible/unpin:!text-white" />
+                        ) : (
+                          <Pin className="w-3 h-3" />
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -521,7 +541,7 @@ export function ChatModeration({
               <Button
                 size="sm"
                 variant={studioAutoScroll ? "default" : "outline"}
-                className="h-7 w-7 p-0"
+                className="group h-7 w-7 p-0"
                 onClick={() => {
                   const newStudioAutoScroll = !studioAutoScroll;
                   handleStudioAutoScrollChange(newStudioAutoScroll);
@@ -534,12 +554,29 @@ export function ChatModeration({
                 <img
                   src="/auto-scroll-icon.svg"
                   alt="Auto scroll"
-                  className="w-3 h-3"
+                  className="w-3 h-3 transition-all duration-200 ease-out group-hover:brightness-0 group-hover:invert group-focus-visible:brightness-0 group-focus-visible:invert"
                 />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>{studioAutoScroll ? "Auto scroll enabled" : "Auto scroll disabled"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant={showHiddenStudio ? "default" : "outline"}
+                className="h-7 px-2 text-[10px]"
+                onClick={() => setShowHiddenStudio((prev) => !prev)}
+              >
+                {showHiddenStudio ? "Hide hidden" : "Show hidden"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{showHiddenStudio ? "Showing hidden messages" : "Hidden messages are filtered out"}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -561,7 +598,7 @@ export function ChatModeration({
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <div className="flex items-center flex-wrap gap-1.5">
                         {msg.isSelected && (
-                          <Star className="w-3 h-3 text-primary fill-primary" />
+                          <Pin className="w-3 h-3 text-primary" />
                         )}
                         <span className="font-bold text-foreground text-xs">
                           {msg.username}
@@ -587,20 +624,22 @@ export function ChatModeration({
                         variant="ghost"
                         className="h-6 w-6 p-0"
                         onClick={() => handleStudioToggleHide(msg.id)}
-                        title="Hide"
+                        title={msg.isHidden ? "Unhide" : "Hide"}
                       >
-                        <EyeOff className="w-3 h-3" />
+                        {msg.isHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0"
+                        className="group/unpin h-6 w-6 p-0"
                         onClick={() => handleStudioToggleSelect(msg.id)}
-                        title={msg.isSelected ? "Unselect" : "Select"}
+                        title={msg.isSelected ? "Unpin" : "Pin"}
                       >
-                        <Star
-                          className={`w-3 h-3 ${msg.isSelected ? "text-primary fill-primary" : ""}`}
-                        />
+                        {msg.isSelected ? (
+                          <PinOff className="w-3 h-3 !text-black transition-colors group-hover/unpin:!text-white group-focus-visible/unpin:!text-white" />
+                        ) : (
+                          <Pin className="w-3 h-3" />
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -685,7 +724,7 @@ export function ChatModeration({
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col pb-2">
           {selectedChat ? (
             <>
               <div className="border-b border-border pb-2 mb-2">
@@ -721,8 +760,8 @@ export function ChatModeration({
                   )}
                 </div>
               </ScrollArea>
-              <div className="flex gap-2">
-                <Textarea
+              <div className="flex gap-2 pt-1">
+                <Input
                   placeholder="Type message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -732,7 +771,7 @@ export function ChatModeration({
                       handleSendPrivateMessage();
                     }
                   }}
-                  className="flex-1 min-h-[36px] h-[36px] text-[10px] py-2"
+                  className="h-[36px] flex-1 text-[10px]"
                 />
                 <Button
                   size="sm"
@@ -740,7 +779,7 @@ export function ChatModeration({
                   disabled={!newMessage.trim()}
                   className="h-[36px] w-[36px] p-0"
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </>

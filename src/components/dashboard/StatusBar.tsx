@@ -1,4 +1,4 @@
-import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, HelpCircle, Heart, Radio, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
+import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, Radio, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,12 +50,7 @@ interface StatusBarProps {
   onDeleteMessage?: (messageId: string) => void;
   viewType?: "input" | "output";
   activeSource?: string;
-  chatMessageCount?: number;
-  qaCount?: number;
-  reactionsCount?: number;
   commentsEnabled?: boolean;
-  qnaEnabled?: boolean;
-  reactionsEnabled?: boolean;
 }
 
 export function StatusBar({
@@ -71,12 +66,7 @@ export function StatusBar({
   onDeleteMessage,
   viewType = "input",
   activeSource = "Camera-1",
-  chatMessageCount,
-  qaCount = 0,
-  reactionsCount = 0,
   commentsEnabled = true,
-  qnaEnabled = true,
-  reactionsEnabled = true,
 }: StatusBarProps) {
   const [isBlockUserDialogOpen, setIsBlockUserDialogOpen] = useState(false);
   const [isSelectedChatDialogOpen, setIsSelectedChatDialogOpen] = useState(false);
@@ -136,8 +126,6 @@ export function StatusBar({
   const selectedMessages = useMemo(() => {
     return messages.filter((msg) => msg.isSelected);
   }, [messages]);
-
-  const totalChatMessages = chatMessageCount ?? messages.length;
 
   // Mock data for Input and Output
   const inputData = {
@@ -221,7 +209,7 @@ export function StatusBar({
 
   return (
     <Fragment>
-      <footer className="h-9 border-t border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between text-xs">
+      <footer className="h-9 border-t border-border/70 bg-card px-4 flex items-center justify-between text-xs">
       <div className="flex items-center gap-4">
         {/* Input Stream Health - Non-clickable */}
         <TooltipProvider delayDuration={300}>
@@ -402,88 +390,6 @@ export function StatusBar({
       </div>
 
       <div className="ml-auto flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          {commentsEnabled && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
-                      disabled
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
-                        {totalChatMessages}
-                      </span>
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Total Chat</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {commentsEnabled && (qnaEnabled || reactionsEnabled) && <div className="h-4 w-px bg-border mx-1" />}
-
-          {qnaEnabled && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
-                      disabled
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
-                        {qaCount}
-                      </span>
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Total Q&A</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {qnaEnabled && reactionsEnabled && <div className="h-4 w-px bg-border mx-1" />}
-
-          {reactionsEnabled && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center cursor-default opacity-70"
-                      disabled
-                    >
-                      <Heart className="w-3.5 h-3.5" />
-                      <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full text-center leading-none">
-                        {reactionsCount}
-                      </span>
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Total reactions</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-
-        <div className="h-5 w-px bg-border" />
 
         <div className="flex items-center gap-3">
           {commentsEnabled && (

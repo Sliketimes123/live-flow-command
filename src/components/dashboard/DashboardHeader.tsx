@@ -16,12 +16,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause, X } from "lucide-react";
+import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause, X, Bell } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,7 +52,15 @@ interface DashboardHeaderProps {
   onStartRecording: () => void;
   onEndEvent: () => void;
   onBack?: () => void;
-  onClose?: () => void;
+  notifications?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    severity: "info" | "warning" | "critical";
+    timestamp: string;
+    isRead: boolean;
+  }>;
+  onMarkAllNotificationsRead?: () => void;
 }
 
 export function DashboardHeader({
@@ -64,7 +81,8 @@ export function DashboardHeader({
   onStartRecording,
   onEndEvent,
   onBack,
-  onClose,
+  notifications = [],
+  onMarkAllNotificationsRead,
 }: DashboardHeaderProps) {
   const liveControlItemClass = "gap-2.5";
   const liveControlIconClass = "w-3.5 h-3.5 shrink-0";
@@ -73,8 +91,11 @@ export function DashboardHeader({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEndEventDialogOpen, setIsEndEventDialogOpen] = useState(false);
   const [isRecordingDialogOpen, setIsRecordingDialogOpen] = useState(false);
+  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [recordingAction, setRecordingAction] = useState<"start" | "stop">("start");
   const { toast } = useToast();
+  const unreadNotificationCount = notifications.filter((notification) => !notification.isRead).length;
 
   const handleCopy = async (text: string, fieldName: string) => {
     try {
@@ -104,11 +125,15 @@ export function DashboardHeader({
     setIsRecordingDialogOpen(true);
   };
 
+  const handleBackClick = () => {
+    setIsLeaveDialogOpen(true);
+  };
+
   return (
-    <header className="h-12 border-b border-border bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between">
+    <header className="h-12 border-b border-border/70 bg-card px-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <Button
-          onClick={onBack}
+          onClick={handleBackClick}
           variant="ghost"
           size="sm"
           className="group h-7 w-7 p-0"
@@ -151,19 +176,78 @@ export function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* User Counts */}
-        {audienceCountEnabled && (
-          <div className="flex items-center gap-4 border-r border-border pr-4">
-            <div className="flex items-center gap-1.5">
-              <Eye className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground">{concurrentUsers}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground">{totalUsers}</span>
-            </div>
-          </div>
-        )}
+        {/* User Counts + Notifications */}
+        <div className="flex items-center gap-3 border-r border-border pr-4">
+          {audienceCountEnabled && (
+            <>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground">{concurrentUsers}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground">{totalUsers}</span>
+                </div>
+              </div>
+              <div className="h-4 w-px bg-border" />
+            </>
+          )}
+          <Dialog
+            open={isNotificationDialogOpen}
+            onOpenChange={(open) => {
+              setIsNotificationDialogOpen(open);
+              if (open) onMarkAllNotificationsRead?.();
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" title="Notifications">
+                <Bell className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-white group-focus-visible:text-white" />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                    {unreadNotificationCount}
+                  </span>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Moderation Alerts</DialogTitle>
+                <DialogDescription>
+                  Latest stream and moderation notifications.
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="h-[320px] pr-2">
+                <div className="space-y-2">
+                  {notifications.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-6 text-center">
+                      No alerts yet.
+                    </p>
+                  ) : (
+                    notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`rounded-lg border p-2 ${
+                          notification.severity === "critical"
+                            ? "border-destructive/40 bg-destructive/5"
+                            : notification.severity === "warning"
+                              ? "border-warning/40 bg-warning/10"
+                              : "border-border bg-card"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">{notification.title}</p>
+                          <span className="text-[10px] text-muted-foreground">{notification.timestamp}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{notification.description}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         {/* Live Status and Timer */}
         <div className="flex items-center gap-3 border-r border-border pr-4">
@@ -260,17 +344,31 @@ export function DashboardHeader({
             </button>
           )}
         </div>
-        <div className="h-4 w-px bg-border" />
-        <Button
-          onClick={onClose}
-          variant="ghost"
-          size="sm"
-          className="group h-7 w-7 p-0"
-          title="Close page"
-        >
-          <X className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-white group-focus-visible:text-white" />
-        </Button>
       </div>
+
+      {/* End Event Warning Dialog */}
+      <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Warning!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure, you want to leave the Event?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>CANCEL</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsLeaveDialogOpen(false);
+                onBack?.();
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              LEAVE
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* End Event Warning Dialog */}
       <AlertDialog open={isEndEventDialogOpen} onOpenChange={setIsEndEventDialogOpen}>

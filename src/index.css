@@ -8,57 +8,109 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Live Dashboard Theme - White & Navy Blue */
+    /* Light Theme */
     --background: 0 0% 100%;
-    --foreground: 217 91% 15%;
+    --foreground: 217 65% 16%;
 
-    --card: 0 0% 99%;
-    --card-foreground: 217 91% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 65% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 217 91% 15%;
+    --popover-foreground: 217 65% 16%;
 
-    --primary: 217 91% 35%;
+    --primary: 217 91% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 50% 93%;
-    --secondary-foreground: 217 91% 25%;
+    --secondary: 214 42% 94%;
+    --secondary-foreground: 217 50% 22%;
 
-    --muted: 214 40% 94%;
-    --muted-foreground: 217 20% 45%;
+    --muted: 214 30% 95%;
+    --muted-foreground: 217 18% 44%;
 
-    --accent: 217 91% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 214 75% 92%;
+    --accent-foreground: 217 50% 22%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 54%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 40%;
+    --success: 146 66% 40%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
+    --warning: 40 92% 48%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 40% 88%;
-    --input: 214 40% 94%;
-    --ring: 217 91% 40%;
+    --border: 215 28% 86%;
+    --input: 215 28% 92%;
+    --ring: 216 90% 61%;
 
-    --radius: 1rem;
+    --radius: 0.85rem;
 
     /* Status Colors */
-    --status-live: 0 84% 60%;
-    --status-stable: 142 76% 40%;
-    --status-warning: 38 92% 50%;
-    --status-offline: 0 0% 55%;
+    --status-live: 0 72% 54%;
+    --status-stable: 146 66% 40%;
+    --status-warning: 40 92% 48%;
+    --status-offline: 217 8% 50%;
 
     /* Surface Variants */
-    --surface-elevated: 217 60% 98%;
-    --surface-overlay: 214 50% 95%;
+    --surface-elevated: 210 40% 98%;
+    --surface-overlay: 214 35% 94%;
 
     /* Glow Effects */
-    --glow-primary: 217 91% 35%;
-    --glow-live: 0 84% 60%;
-    --glow-success: 142 76% 40%;
+    --glow-primary: 216 90% 61%;
+    --glow-live: 0 72% 54%;
+    --glow-success: 146 66% 40%;
+  }
+
+  .dark {
+    /* Broadcast control room dark palette */
+    --background: 228 43% 6%;
+    --foreground: 214 24% 88%;
+
+    --card: 228 30% 10%;
+    --card-foreground: 214 24% 88%;
+
+    --popover: 228 30% 10%;
+    --popover-foreground: 214 24% 88%;
+
+    --primary: 216 85% 60%;
+    --primary-foreground: 225 46% 10%;
+
+    --secondary: 226 20% 16%;
+    --secondary-foreground: 214 24% 88%;
+
+    --muted: 227 18% 14%;
+    --muted-foreground: 216 13% 68%;
+
+    --accent: 216 82% 56%;
+    --accent-foreground: 225 46% 10%;
+
+    --destructive: 0 72% 54%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 146 66% 44%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 40 92% 56%;
+    --warning-foreground: 223 46% 10%;
+
+    --border: 225 17% 19%;
+    --input: 227 18% 13%;
+    --ring: 216 85% 60%;
+
+    /* Status Colors */
+    --status-live: 0 72% 54%;
+    --status-stable: 146 66% 44%;
+    --status-warning: 40 92% 56%;
+    --status-offline: 217 8% 52%;
+
+    /* Surface Variants */
+    --surface-elevated: 228 28% 10%;
+    --surface-overlay: 227 22% 13%;
+
+    /* Glow Effects */
+    --glow-primary: 216 85% 60%;
+    --glow-live: 0 72% 54%;
+    --glow-success: 146 66% 44%;
   }
 }
 
@@ -69,6 +121,12 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background-image: radial-gradient(circle at 10% 10%, hsl(var(--primary) / 0.04), transparent 42%),
+      radial-gradient(circle at 80% 0%, hsl(var(--accent) / 0.04), transparent 45%);
+  }
+
+  .dark body {
+    background-image: none;
   }
 }
 
@@ -107,5 +165,19 @@ All colors MUST be HSL.
 
   .surface-overlay {
     background-color: hsl(var(--surface-overlay));
+  }
+}
+
+@layer components {
+  .moderation-action-btn {
+    @apply border border-border/60 bg-muted/30 text-foreground/90 transition-colors hover:bg-primary hover:text-black hover:border-primary disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .moderation-action-btn-active {
+    @apply bg-primary text-black border-primary;
+  }
+
+  .moderation-action-btn-icon {
+    @apply [&_svg]:text-current;
   }
 }

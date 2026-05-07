@@ -297,12 +297,12 @@ export function LiveModerationPanel({
   // Input stream data
   const inputData = {
     primaryInput: activeSource,
-    streamHealth: publishingHealth,
-    inputMode: "HDMI",
-    bitrateCurrent: bitrate,
-    bitrateAverage: 3200,
-    dimension: "1920:1080",
-    frameRate: fps,
+    streamHealth: "stable" as const,
+    inputMode: "RTMP",
+    bitrateCurrent: 1470,
+    bitrateAverage: 1451,
+    dimension: "1280×720",
+    frameRate: 25,
   };
 
   // Output stream data
@@ -392,46 +392,56 @@ export function LiveModerationPanel({
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-3 pt-1">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-3 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
-                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Stream Health</span>
-                        <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-bold border ${healthTextColor[inputData.streamHealth]}`}>
-                          {healthText[inputData.streamHealth]}
-                        </span>
-                      </div>
-
-                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <ExternalLink className="w-3 h-3" />
-                          <span className="text-[10px] font-medium uppercase">Mode</span>
-                        </div>
-                        <span className="text-xs font-semibold text-foreground block truncate" title={inputData.inputMode}>{inputData.inputMode}</span>
-                      </div>
-
-                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Eye className="w-3 h-3" />
-                          <span className="text-[10px] font-medium uppercase">Dim</span>
-                        </div>
-                        <span className="text-xs font-semibold text-foreground block truncate" title={inputData.dimension}>{inputData.dimension}</span>
-                      </div>
-
-                      <div className="p-2 rounded-lg bg-muted/30 border border-border/30 space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Play className="w-3 h-3" />
-                          <span className="text-[10px] font-medium uppercase">FPS</span>
-                        </div>
-                        <span className="text-xs font-semibold text-foreground block truncate">{inputData.frameRate}</span>
-                      </div>
-
-                      <div className="col-span-3 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(96px,1fr))]">
+                      <div className="min-h-[84px] p-2 rounded-lg bg-muted/25 border border-border/40 min-w-0">
+                        <div className="h-5 flex items-center gap-1.5 text-muted-foreground">
                           <Activity className="w-3 h-3" />
-                          <span className="text-[10px] font-medium uppercase">Bitrate</span>
+                          <span className="text-[9px] font-medium uppercase tracking-wide">Status</span>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-xs font-semibold text-foreground">{inputData.bitrateCurrent}</span>
-                          <span className="text-[10px] text-muted-foreground">kbps</span>
+                        <div className="mt-2">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[8px] font-semibold border ${healthTextColor[inputData.streamHealth]}`}>
+                            Healthy
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="min-h-[84px] p-2 rounded-lg bg-muted/25 border border-border/40 min-w-0">
+                        <div className="h-5 flex items-center gap-1.5 text-muted-foreground">
+                          <ExternalLink className="w-3 h-3" />
+                          <span className="text-[9px] font-medium uppercase tracking-wide">Input</span>
+                        </div>
+                        <div className="mt-2 text-[8px] font-semibold text-foreground leading-tight" title={inputData.inputMode}>
+                          {inputData.inputMode}
+                        </div>
+                      </div>
+
+                      <div className="min-h-[84px] p-2 rounded-lg bg-muted/25 border border-border/40 min-w-0">
+                        <div className="h-5 flex items-center gap-1.5 text-muted-foreground">
+                          <Eye className="w-3 h-3" />
+                          <span className="text-[9px] font-medium uppercase tracking-wide">Resolution</span>
+                        </div>
+                        <div className="mt-2 text-[8px] font-semibold text-foreground leading-tight" title={inputData.dimension}>
+                          {inputData.dimension}
+                        </div>
+                      </div>
+
+                      <div className="min-h-[84px] p-2 rounded-lg bg-muted/25 border border-border/40 min-w-0">
+                        <div className="h-5 flex items-center gap-1.5 text-muted-foreground">
+                          <Play className="w-3 h-3" />
+                          <span className="text-[9px] font-medium uppercase tracking-wide">FPS</span>
+                        </div>
+                        <div className="mt-2 text-[8px] font-semibold text-foreground leading-tight">{inputData.frameRate}</div>
+                      </div>
+
+                      <div className="min-h-[84px] p-2 rounded-lg bg-muted/25 border border-border/40 min-w-0">
+                        <div className="h-5 flex items-center gap-1.5 text-muted-foreground">
+                          <Activity className="w-3 h-3" />
+                          <span className="text-[9px] font-medium uppercase tracking-wide">Bitrate</span>
+                        </div>
+                        <div className="text-[8px] text-muted-foreground leading-none">(Cur / Avg)</div>
+                        <div className="mt-1 text-[8px] font-semibold text-foreground font-mono tabular-nums leading-tight break-words">
+                          {inputData.bitrateCurrent}/{inputData.bitrateAverage}
+                          <span className="ml-1 text-[8px] text-muted-foreground">kbps</span>
                         </div>
                       </div>
                     </div>
@@ -449,7 +459,7 @@ export function LiveModerationPanel({
                   <AccordionContent className="pb-3 pt-1">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="col-span-2 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
-                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Stream Health</span>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Health</span>
                         <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-bold border ${healthTextColor[outputData.streamHealth]}`}>
                           {healthText[outputData.streamHealth]}
                         </span>
@@ -503,23 +513,23 @@ export function LiveModerationPanel({
 
 
                       {/* Logs List */}
-                      <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
                         {eventLogs.map((log) => (
                           <div
                             key={log.id}
-                            className="group flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border/30"
+                            className="group flex w-full min-w-0 flex-col items-start gap-1.5 rounded-lg border border-transparent p-2.5 transition-colors hover:border-border/30 hover:bg-muted/50"
                           >
-                            <span className="text-[9px] font-medium text-muted-foreground font-mono whitespace-nowrap mt-0.5 bg-background px-1 py-0.5 rounded border border-border/20">
+                            <span className="shrink-0 text-[9px] font-medium leading-none text-muted-foreground whitespace-nowrap rounded border border-border/20 bg-background px-1 py-1">
                               {log.timestamp}
                             </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col">
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-primary/70">{log.category}</span>
-                                {log.description && (
-                                  <span className="text-[11px] text-foreground font-medium leading-tight">{log.description}</span>
-                                )}
-                              </div>
-                            </div>
+                            <span className="w-full text-left text-[9px] font-bold uppercase tracking-wider text-primary">
+                              {log.category}
+                            </span>
+                            {log.description && (
+                              <span className="m-0 block w-full min-w-0 text-left text-[11px] font-mono font-normal leading-relaxed tracking-normal text-foreground/90 break-words">
+                                {log.description}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>

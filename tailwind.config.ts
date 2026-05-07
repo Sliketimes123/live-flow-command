@@ -64,6 +64,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+        mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",

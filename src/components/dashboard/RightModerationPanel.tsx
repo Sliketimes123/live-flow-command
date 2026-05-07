@@ -1,0 +1,758 @@
+import { useEffect, useMemo, useState } from "react";
+import { ChatModeration, type BlockedUser, type ChatMessage } from "./moderation/ChatModeration";
+import { QAPanel } from "./moderation/QAPanel";
+import {
+  Info,
+  Settings,
+  MessageSquare,
+  MessageCircle,
+  FileText,
+  Lock,
+  User,
+  HelpCircle,
+  Calendar,
+  Clock,
+  Link2,
+  ExternalLink,
+  MoreVertical,
+  UserPlus,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  RotateCw,
+  Play,
+  Zap,
+  BarChart,
+  Heart,
+  LayoutGrid,
+  Moon,
+  Sun,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+
+type PanelKey = "info" | "settings" | "comments" | "studio" | "private" | "qa" | "logs";
+
+interface EventLog {
+  id: string;
+  timestamp: string;
+  category: "Event" | "Live Status" | "Stream";
+  description: string;
+}
+
+const EVENT_LOGS: EventLog[] = [
+  { id: "1", timestamp: "10:57 AM", category: "Event", description: "Event initializing started" },
+  { id: "2", timestamp: "10:57 AM", category: "Event", description: "Event has been started" },
+  { id: "3", timestamp: "10:59 AM", category: "Live Status", description: "Event is live for audience" },
+  { id: "4", timestamp: "10:59 AM", category: "Stream", description: "Stream connection established" },
+  { id: "5", timestamp: "10:59 AM", category: "Stream", description: "Live streaming is running" },
+  { id: "6", timestamp: "11:02 AM", category: "Stream", description: "Bitrate stable at 3500 kbps" },
+  { id: "7", timestamp: "11:15 AM", category: "Event", description: "Audience engagement increased" },
+  { id: "8", timestamp: "11:30 AM", category: "Stream", description: "Health check passed" },
+  { id: "9", timestamp: "11:45 AM", category: "Live Status", description: "Viewer count updated: 1.2k" },
+  { id: "10", timestamp: "12:00 PM", category: "Event", description: "Q&A session started" },
+];
+
+interface RightModerationPanelProps {
+  messages: ChatMessage[];
+  blockedUsers: BlockedUser[];
+  onBlockUser: (username: string) => void;
+  onUnblockUser: (username: string) => void;
+  onToggleHide?: (messageId: string) => void;
+  onTogglePin?: (messageId: string) => void;
+  onToggleSelect?: (messageId: string) => void;
+  onCopy?: (message: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onSendCommentMessage?: (message: string) => void;
+  commentsEnabled?: boolean;
+  qnaEnabled?: boolean;
+  eventTitle?: string;
+  eventDescription?: string;
+  eventDate?: string;
+  eventTime?: string;
+  rtmpUrl?: string;
+  commentsToggle?: boolean;
+  audienceCountEnabled?: boolean;
+  reactionsEnabled?: boolean;
+  qnaToggle?: boolean;
+  onCommentsEnabledChange?: (enabled: boolean) => void;
+  onAudienceCountEnabledChange?: (enabled: boolean) => void;
+  onReactionsEnabledChange?: (enabled: boolean) => void;
+  onQnaEnabledChange?: (enabled: boolean) => void;
+  onQuestionMetricsChange?: (metrics: { total: number; queue: number; selected: number; closed: number }) => void;
+  onQASpike?: (payload: { increaseBy: number; queueCount: number }) => void;
+  onTabViewed?: (tab: "comments" | "studio" | "private" | "qa") => void;
+  isDarkTheme?: boolean;
+  onToggleTheme?: () => void;
+}
+
+export function RightModerationPanel({
+  messages,
+  blockedUsers,
+  onBlockUser,
+  onUnblockUser,
+  onToggleHide,
+  onTogglePin,
+  onToggleSelect,
+  onCopy,
+  onDeleteMessage,
+  onSendCommentMessage,
+  commentsEnabled = true,
+  qnaEnabled = true,
+  eventTitle = "Live Event – Global Summit",
+  eventDescription = "Join us for an exciting live event featuring industry leaders and innovative discussions.",
+  eventDate = "Nov 20, 2025",
+  eventTime = "11:09 AM",
+  rtmpUrl = "rtmp://studio-vwfeyv.sli.ke/live/",
+  commentsToggle = true,
+  audienceCountEnabled = true,
+  reactionsEnabled = true,
+  qnaToggle = true,
+  onCommentsEnabledChange,
+  onAudienceCountEnabledChange,
+  onReactionsEnabledChange,
+  onQnaEnabledChange,
+  onQuestionMetricsChange,
+  onQASpike,
+  onTabViewed,
+  isDarkTheme = true,
+  onToggleTheme,
+}: RightModerationPanelProps) {
+  const [activePanel, setActivePanel] = useState<PanelKey>("comments");
+  const [commentsAutoScroll, setCommentsAutoScroll] = useState(false);
+  const [studioAutoScroll, setStudioAutoScroll] = useState(false);
+  const [studioCount, setStudioCount] = useState(0);
+  const [privateCount, setPrivateCount] = useState(0);
+  const [qaQueueCount, setQaQueueCount] = useState(0);
+  const [showStreamKey, setShowStreamKey] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState("");
+  const [isResetStreamDialogOpen, setIsResetStreamDialogOpen] = useState(false);
+  const [isWindowViewOpen, setIsWindowViewOpen] = useState(false);
+  const [windowViewActiveTab, setWindowViewActiveTab] = useState<"comments" | "studio" | "private" | "qa">("studio");
+  const [liveDurationEnabled, setLiveDurationEnabled] = useState(false);
+  const [quickMessagesEnabled, setQuickMessagesEnabled] = useState(false);
+  const [reactionStatsEnabled, setReactionStatsEnabled] = useState(true);
+  const [isEventDescriptionExpanded, setIsEventDescriptionExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { toast } = useToast();
+  const eventId = "npn57jcgzzo";
+  const streamKey = "npn57eigzo";
+
+  const commentsCount = messages.length;
+  const badgeClass = (key: PanelKey) =>
+    activePanel === key
+      ? "absolute right-1 top-1 z-20 inline-flex min-w-[16px] justify-center rounded-full bg-primary px-1 py-0 text-[10px] font-semibold text-primary-foreground pointer-events-none"
+      : "absolute right-1 top-1 z-20 inline-flex min-w-[16px] justify-center rounded-full bg-muted/90 px-1 py-0 text-[10px] font-medium text-muted-foreground border border-border/50 pointer-events-none";
+
+  useEffect(() => {
+    if (["comments", "studio", "private", "qa"].includes(activePanel)) {
+      onTabViewed?.(activePanel as "comments" | "studio" | "private" | "qa");
+    }
+  }, [activePanel, onTabViewed]);
+
+  useEffect(() => {
+    if (windowViewActiveTab === "comments" && !commentsEnabled) {
+      setWindowViewActiveTab("studio");
+    }
+    if (windowViewActiveTab === "qa" && !qnaEnabled) {
+      setWindowViewActiveTab(commentsEnabled ? "comments" : "studio");
+    }
+  }, [windowViewActiveTab, commentsEnabled, qnaEnabled]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const navItems = useMemo(
+    () => [
+      { key: "info" as const, icon: Info, label: "Info" },
+      { key: "comments" as const, icon: MessageCircle, label: "Chat", count: commentsCount },
+      { key: "studio" as const, icon: MessageSquare, label: "Studio Chat", count: studioCount },
+      { key: "private" as const, icon: User, label: "Private Chat", count: privateCount },
+      { key: "logs" as const, icon: FileText, label: "Logs" },
+      { key: "qa" as const, icon: HelpCircle, label: "Q&A", count: qaQueueCount },
+      { key: "settings" as const, icon: Settings, label: "Settings" },
+    ],
+    [commentsCount, studioCount, privateCount, qaQueueCount]
+  );
+  const panelTitleMap: Record<PanelKey, string> = {
+    info: "Info",
+    private: "Private Chat",
+    comments: "Chat",
+    studio: "Studio Chat",
+    qa: "Q&A",
+    logs: "Logs",
+    settings: "Event Settings",
+  };
+  const windowTabs = [
+    { key: "comments" as const, label: "Chat", count: commentsCount, enabled: commentsEnabled, icon: MessageCircle },
+    { key: "studio" as const, label: "Studio Chat", count: studioCount, enabled: true, icon: MessageSquare },
+    { key: "private" as const, label: "Private Chat", count: privateCount, enabled: true, icon: User },
+    { key: "qa" as const, label: "Q&A", count: qaQueueCount, enabled: qnaEnabled, icon: HelpCircle },
+  ];
+
+  const handleCopy = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast({
+        title: "Copied!",
+        description: `${fieldName} copied to clipboard`,
+      });
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (error) {
+      toast({
+        title: "Fullscreen unavailable",
+        description: "Your browser blocked fullscreen mode.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="h-full rounded-2xl border border-border/70 bg-card overflow-hidden">
+      <div className="h-full flex min-w-0">
+        <div className="flex-1 min-w-0 border-r border-border/60 p-2 flex flex-col">
+          <div className="mb-2 border-b border-border/60 px-2 pb-2">
+            <h2 className="text-sm font-semibold text-foreground">{panelTitleMap[activePanel]}</h2>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {activePanel === "comments" && (
+              <ChatModeration
+                messages={messages}
+                blockedUsers={blockedUsers}
+                onBlockUser={onBlockUser}
+                onUnblockUser={onUnblockUser}
+                onToggleHide={onToggleHide}
+                onTogglePin={onTogglePin}
+                onToggleSelect={onToggleSelect}
+                onCopy={onCopy}
+                onDeleteMessage={onDeleteMessage}
+                onSendCommentMessage={onSendCommentMessage}
+                activeTab="comments"
+                autoScroll={commentsAutoScroll}
+                onAutoScrollChange={setCommentsAutoScroll}
+              />
+            )}
+
+            {activePanel === "studio" && (
+              <ChatModeration
+                messages={messages}
+                blockedUsers={blockedUsers}
+                onBlockUser={onBlockUser}
+                onUnblockUser={onUnblockUser}
+                onToggleHide={onToggleHide}
+                onTogglePin={onTogglePin}
+                onToggleSelect={onToggleSelect}
+                onCopy={onCopy}
+                onDeleteMessage={onDeleteMessage}
+                activeTab="studio"
+                autoScroll={studioAutoScroll}
+                onAutoScrollChange={setStudioAutoScroll}
+                onMessageCountChange={setStudioCount}
+              />
+            )}
+
+            {activePanel === "private" && (
+              <ChatModeration
+                messages={messages}
+                blockedUsers={blockedUsers}
+                onBlockUser={onBlockUser}
+                onUnblockUser={onUnblockUser}
+                onToggleHide={onToggleHide}
+                onTogglePin={onTogglePin}
+                onToggleSelect={onToggleSelect}
+                onCopy={onCopy}
+                onDeleteMessage={onDeleteMessage}
+                activeTab="private"
+                onMessageCountChange={setPrivateCount}
+              />
+            )}
+
+            {activePanel === "qa" && qnaEnabled && (
+              <QAPanel
+                onBlockUser={onBlockUser}
+                blockedUsers={blockedUsers}
+                onQuestionMetricsChange={(metrics) => {
+                  setQaQueueCount(metrics.queue);
+                  onQuestionMetricsChange?.(metrics);
+                }}
+                onQASpike={onQASpike}
+              />
+            )}
+
+            {activePanel === "logs" && (
+              <ScrollArea className="h-full p-2">
+                <div className="space-y-3">
+                  {EVENT_LOGS.map((log) => (
+                    <div
+                      key={log.id}
+                      className="group flex w-full min-w-0 flex-col items-start gap-1.5 rounded-lg border border-transparent p-2.5 transition-colors hover:border-border/30 hover:bg-muted/50"
+                    >
+                      <span className="shrink-0 text-[11px] font-medium leading-none text-muted-foreground whitespace-nowrap rounded border border-border/20 bg-background px-1.5 py-1">
+                        {log.timestamp}
+                      </span>
+                      <span className="w-full text-left text-[11px] font-bold uppercase tracking-wider text-primary">
+                        {log.category}
+                      </span>
+                      <p className="m-0 w-full min-w-0 text-left text-[12px] font-mono font-normal leading-relaxed tracking-normal text-foreground/90 break-words">
+                        {log.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+
+            {activePanel === "info" && (
+              <ScrollArea className="h-full -mr-2 pr-2">
+                <div className="space-y-4 min-w-0 p-2">
+                  <div className="rounded-xl border border-border/60 bg-card p-3 min-w-0">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide">Event Details</h3>
+                    <div className="mt-2 flex flex-wrap items-start gap-2 min-w-0">
+                      <p className="text-sm font-semibold min-w-0 break-words flex-1">{eventTitle}</p>
+                      <div className="flex items-center gap-1 shrink-0 ml-auto">
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full">
+                                <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Open Preview</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full">
+                              <MoreVertical className="w-3 h-3 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem>
+                              <UserPlus className="w-3.5 h-3.5 mr-2" />
+                              Invite
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleCopy(`${window.location.origin}/event/${eventId}`, "Event URL")}>
+                              <Copy className="w-3.5 h-3.5 mr-2" />
+                              Copy URL
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <div className="mt-1">
+                      <p
+                        className="text-xs text-muted-foreground"
+                        style={
+                          isEventDescriptionExpanded
+                            ? undefined
+                            : {
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }
+                        }
+                      >
+                        {eventDescription}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsEventDescriptionExpanded((prev) => !prev)}
+                        className="mt-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                      >
+                        {isEventDescriptionExpanded ? "Read less" : "Read more"}
+                      </button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground min-w-0">
+                      <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />{eventDate}</span>
+                      <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{eventTime}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-card p-3 min-w-0">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide">Ingestion</h3>
+                    <p className="mt-2 text-xs text-muted-foreground uppercase">Primary RTMP</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 min-w-0">
+                      <div className="rounded-md border border-border/60 bg-muted/40 px-2 py-1.5 text-xs font-mono truncate flex-1 min-w-0">
+                        {rtmpUrl}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleCopy(rtmpUrl, "RTMP URL")}>
+                          {copiedField === "RTMP URL" ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground uppercase">Stream Key</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 min-w-0">
+                      <Input
+                        type={showStreamKey ? "text" : "password"}
+                        value={streamKey}
+                        readOnly
+                        className="h-8 text-xs font-mono bg-muted/30 border-border/50 min-w-0 flex-1"
+                      />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" onClick={() => setShowStreamKey((prev) => !prev)}>
+                          {showStreamKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleCopy(streamKey, "Stream Key")}>
+                          {copiedField === "Stream Key" ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground inline-flex items-center gap-1">
+                      <Link2 className="w-3 h-3" />
+                      Stream configured and active
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-card p-3 min-w-0">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide">Live Channels</h3>
+                    <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                      <SelectTrigger className="h-8 mt-2 text-xs bg-muted/30 border-border/50 w-full min-w-0">
+                        <SelectValue placeholder="Select Live Channel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="channel1">Channel 1</SelectItem>
+                        <SelectItem value="channel2">Channel 2</SelectItem>
+                        <SelectItem value="channel3">Channel 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </ScrollArea>
+            )}
+
+            {activePanel === "settings" && (
+              <ScrollArea className="h-full p-2">
+                <div className="space-y-2 rounded-xl border border-border/60 bg-card p-3">
+                  {[
+                    { label: "Comments", checked: commentsToggle, onChange: onCommentsEnabledChange },
+                    { label: "Live Duration", checked: liveDurationEnabled, onChange: setLiveDurationEnabled },
+                    { label: "Audience Count", checked: audienceCountEnabled, onChange: onAudienceCountEnabledChange },
+                    { label: "Quick Messages", checked: quickMessagesEnabled, onChange: setQuickMessagesEnabled },
+                    { label: "Reactions", checked: reactionsEnabled, onChange: onReactionsEnabledChange },
+                    { label: "Reaction Stats", checked: reactionStatsEnabled, onChange: setReactionStatsEnabled },
+                    { label: "Q&A", checked: qnaToggle, onChange: onQnaEnabledChange },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 p-2">
+                      <span className="text-xs">{item.label}</span>
+                      <Switch checked={item.checked} onCheckedChange={item.onChange ?? (() => undefined)} />
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 h-9 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                    onClick={() => setIsResetStreamDialogOpen(true)}
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                    Reset Stream
+                  </Button>
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </div>
+
+        <aside className="w-[52px] shrink-0 px-1 py-2 border-l border-border/60 bg-background">
+          <div className="relative">
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setIsWindowViewOpen(true)}
+                    className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                    aria-label="Window View"
+                  >
+                    <LayoutGrid className="w-[20px] h-[20px]" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Window View</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="mx-1 my-1 h-px bg-border/60" />
+          </div>
+          {navItems
+            .filter((item) => (item.key === "comments" ? commentsEnabled : true))
+            .filter((item) => (item.key === "qa" ? qnaEnabled : true))
+            .map((item) => {
+              const ActiveIcon = item.icon;
+              const isActive = activePanel === item.key;
+              return (
+                <div key={item.key} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActivePanel(item.key)}
+                    className={`relative flex h-12 w-full items-center justify-center rounded-lg transition-colors ${
+                      isActive
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                    }`}
+                    title={item.label}
+                    aria-label={item.label}
+                  >
+                    <ActiveIcon className="w-[20px] h-[20px]" />
+                    {typeof item.count === "number" && <span className={badgeClass(item.key)}>{item.count}</span>}
+                  </button>
+                  <div className={`mx-1 my-1 h-px ${isActive ? "bg-primary/90" : "bg-border/60"}`} />
+                </div>
+              );
+            })}
+          <div className="mx-1 my-1 h-px bg-border/60" />
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                  aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
+                  title={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {isDarkTheme ? <Sun className="w-[20px] h-[20px]" /> : <Moon className="w-[20px] h-[20px]" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>{isDarkTheme ? "Light mode" : "Dark mode"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="mx-1 my-1 h-px bg-border/60" />
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleToggleFullscreen}
+                  className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                  aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                >
+                  {isFullscreen ? <Minimize2 className="w-[20px] h-[20px]" /> : <Maximize2 className="w-[20px] h-[20px]" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </aside>
+      </div>
+      {/* Window View Dialog */}
+      <Dialog open={isWindowViewOpen} onOpenChange={setIsWindowViewOpen}>
+        <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] flex flex-col p-0 gap-0 overflow-hidden border border-border/50 bg-background/95 backdrop-blur-md shadow-2xl">
+          <DialogHeader className="px-5 py-3.5 border-b border-border/50 shrink-0 flex-row items-center justify-between space-y-0 bg-card/40">
+            <DialogTitle className="text-base font-semibold tracking-tight text-foreground">Moderation Window View</DialogTitle>
+          </DialogHeader>
+          <div className="px-4 py-2 border-b border-border/50 bg-card/25">
+            <div className="overflow-x-auto">
+              <Tabs
+                value={windowViewActiveTab}
+                onValueChange={(value) => setWindowViewActiveTab(value as "comments" | "studio" | "private" | "qa")}
+                className="w-full"
+              >
+                <TabsList className="h-auto min-h-9 bg-transparent p-0 gap-2 inline-flex w-max min-w-full justify-start">
+                  {windowTabs.filter((tab) => tab.enabled).map((tab) => (
+                    <TabsTrigger
+                      key={tab.key}
+                      value={tab.key}
+                      className="h-8 px-3 rounded-md border border-border/60 bg-card text-xs text-muted-foreground data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:border-primary/60"
+                    >
+                      {tab.label}
+                      <span className="ml-2 inline-flex min-w-[16px] justify-center rounded-full bg-muted/70 px-1 py-0 text-[10px] font-semibold text-foreground data-[state=active]:bg-primary/20">
+                        {tab.count}
+                      </span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+          <div className="flex-1 p-4 overflow-hidden min-h-0">
+            <div className="h-full flex flex-col rounded-xl overflow-hidden min-h-0 border border-border/60 bg-card shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              {windowViewActiveTab === "comments" && commentsEnabled && (
+                <>
+                  <div className="px-3.5 py-2 border-b border-border/50 bg-muted/25 shrink-0 flex items-center gap-2.5">
+                    <MessageCircle className="w-3.5 h-3.5 text-muted-foreground/90" />
+                    <span className="text-xs font-semibold tracking-wide text-foreground/95">Chat</span>
+                  </div>
+                  <div className="flex-1 overflow-hidden p-2.5 min-h-0">
+                    <ChatModeration
+                      messages={messages}
+                      blockedUsers={blockedUsers}
+                      onBlockUser={onBlockUser}
+                      onUnblockUser={onUnblockUser}
+                      onToggleHide={onToggleHide}
+                      onTogglePin={onTogglePin}
+                      onToggleSelect={onToggleSelect}
+                      onCopy={onCopy}
+                      onDeleteMessage={onDeleteMessage}
+                      onSendCommentMessage={onSendCommentMessage}
+                      activeTab="comments"
+                    />
+                  </div>
+                </>
+              )}
+
+              {windowViewActiveTab === "studio" && (
+                <>
+                  <div className="px-3.5 py-2 border-b border-border/50 bg-muted/25 shrink-0 flex items-center gap-2.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/90" />
+                    <span className="text-xs font-semibold tracking-wide text-foreground/95">Studio Chat</span>
+                  </div>
+                  <div className="flex-1 overflow-hidden p-2.5 min-h-0">
+                    <ChatModeration
+                      messages={messages}
+                      blockedUsers={blockedUsers}
+                      onBlockUser={onBlockUser}
+                      onUnblockUser={onUnblockUser}
+                      onToggleHide={onToggleHide}
+                      onTogglePin={onTogglePin}
+                      onToggleSelect={onToggleSelect}
+                      onCopy={onCopy}
+                      onDeleteMessage={onDeleteMessage}
+                      activeTab="studio"
+                      onMessageCountChange={setStudioCount}
+                    />
+                  </div>
+                </>
+              )}
+
+              {windowViewActiveTab === "private" && (
+                <>
+                  <div className="px-3.5 py-2 border-b border-border/50 bg-muted/25 shrink-0 flex items-center gap-2.5">
+                    <User className="w-3.5 h-3.5 text-muted-foreground/90" />
+                    <span className="text-xs font-semibold tracking-wide text-foreground/95">Private Chat</span>
+                  </div>
+                  <div className="flex-1 overflow-hidden p-2.5 min-h-0">
+                    <ChatModeration
+                      messages={messages}
+                      blockedUsers={blockedUsers}
+                      onBlockUser={onBlockUser}
+                      onUnblockUser={onUnblockUser}
+                      onToggleHide={onToggleHide}
+                      onTogglePin={onTogglePin}
+                      onToggleSelect={onToggleSelect}
+                      onCopy={onCopy}
+                      onDeleteMessage={onDeleteMessage}
+                      activeTab="private"
+                      onMessageCountChange={setPrivateCount}
+                    />
+                  </div>
+                </>
+              )}
+
+              {windowViewActiveTab === "qa" && qnaEnabled && (
+                <>
+                  <div className="px-3.5 py-2 border-b border-border/50 bg-muted/25 shrink-0 flex items-center gap-2.5">
+                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/90" />
+                    <span className="text-xs font-semibold tracking-wide text-foreground/95">Q&A</span>
+                  </div>
+                  <div className="flex-1 overflow-hidden min-h-0">
+                    <QAPanel
+                      onBlockUser={onBlockUser}
+                      blockedUsers={blockedUsers}
+                      onQuestionMetricsChange={(metrics) => {
+                        setQaQueueCount(metrics.queue);
+                        onQuestionMetricsChange?.(metrics);
+                      }}
+                      onQASpike={onQASpike}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isResetStreamDialogOpen} onOpenChange={setIsResetStreamDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Stream</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the stream? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setIsResetStreamDialogOpen(false)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Reset Stream
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

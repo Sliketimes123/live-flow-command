@@ -420,10 +420,10 @@ const Index = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden p-3 min-w-0">
-        <div ref={mainContentRef} className="h-full flex min-w-0 items-stretch gap-2">
+      <main className="flex-1 overflow-hidden p-3 min-w-0 min-h-0">
+        <div ref={mainContentRef} className="h-full flex min-w-0 min-h-0 items-stretch gap-2">
         <section
-          className="min-w-[280px] overflow-hidden"
+          className="min-w-[280px] overflow-visible min-h-0"
           style={{ width: leftPanelWidth || undefined }}
         >
           <EventHealthColumn />
@@ -437,7 +437,7 @@ const Index = () => {
           className="w-1 shrink-0 cursor-col-resize rounded-full bg-border/70 hover:bg-primary/60 active:bg-primary/80 transition-colors"
         />
 
-        <section className="flex-1 min-w-[280px] overflow-hidden">
+        <section className="flex-1 min-w-[280px] overflow-visible min-h-0">
           <OutputHealthColumn
             publishingHealth={publishingHealth}
           />
@@ -452,7 +452,7 @@ const Index = () => {
         />
 
         <section
-          className="min-w-[360px] overflow-hidden"
+          className="min-w-[360px] overflow-hidden min-h-0"
           style={{ width: rightPanelWidth || undefined }}
         >
           <RightModerationPanel

@@ -181,3 +181,65 @@ All colors MUST be HSL.
     @apply [&_svg]:text-current;
   }
 }
+
+/* Scrollbar styling for visible log table scroll */
+.scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.35);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.75);
+}
+
+/* Scrollbar appears only when hovered */
+.hover-scrollbar {
+  scrollbar-width: none;
+}
+
+.hover-scrollbar:hover {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) hsl(var(--muted) / 0.35);
+}
+
+.hover-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* Ensure vertical scrollbar stays visible in logs viewport */
+.force-vertical-scrollbar {
+  scrollbar-width: auto;
+}
+
+.force-vertical-scrollbar::-webkit-scrollbar:vertical {
+  width: 10px;
+}
+
+.force-vertical-scrollbar::-webkit-scrollbar-track:vertical {
+  background: hsl(var(--muted) / 0.45);
+}
+
+.force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}

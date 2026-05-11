@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Star, Eye, EyeOff, Copy, Check, Trash2, ArrowRight, User, Ban, MessageSquare, Pin, PinOff } from "lucide-react";
+import { Search, Star, Eye, EyeOff, Copy, Check, Trash2, ArrowRight, User, Ban, MessageSquare, Pin, PinOff, ChevronsDown } from "lucide-react";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -461,7 +461,11 @@ export function ChatModeration({
               <Button
                 size="sm"
                 variant={autoScroll ? "default" : "outline"}
-                className="group h-9 w-9 p-0 rounded-lg border border-border/50"
+                className={`group h-9 w-9 p-0 rounded-lg border border-border/50 ${
+                  autoScroll
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                }`}
                 onClick={() => {
                   const newAutoScroll = !autoScroll;
                   handleAutoScrollChange(newAutoScroll);
@@ -471,11 +475,7 @@ export function ChatModeration({
                   }
                 }}
               >
-                <img
-                  src="/auto-scroll-icon.svg"
-                  alt="Auto scroll"
-                  className="w-3 h-3 brightness-0 invert transition-all duration-200 ease-out group-hover:invert-0 group-focus-visible:invert-0"
-                />
+                <ChevronsDown className="w-3.5 h-3.5 text-current" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -664,7 +664,11 @@ export function ChatModeration({
               <Button
                 size="sm"
                 variant={studioAutoScroll ? "default" : "outline"}
-                className="group h-9 w-9 p-0 rounded-lg border border-border/50"
+                className={`group h-9 w-9 p-0 rounded-lg border border-border/50 ${
+                  studioAutoScroll
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                }`}
                 onClick={() => {
                   const newStudioAutoScroll = !studioAutoScroll;
                   handleStudioAutoScrollChange(newStudioAutoScroll);
@@ -674,11 +678,7 @@ export function ChatModeration({
                   }
                 }}
               >
-                <img
-                  src="/auto-scroll-icon.svg"
-                  alt="Auto scroll"
-                  className="w-3 h-3 brightness-0 invert transition-all duration-200 ease-out group-hover:invert-0 group-focus-visible:invert-0"
-                />
+                <ChevronsDown className="w-3.5 h-3.5 text-current" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>

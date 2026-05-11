@@ -1,11 +1,7 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity, Eye, ExternalLink, Play } from "lucide-react";
+import { LiveLogTable } from "./LiveLogTable";
+import { LogPreviewDialog } from "./LogPreviewDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 export function EventHealthColumn() {
 
   const inputData = {
@@ -23,12 +19,61 @@ export function EventHealthColumn() {
     warning: "text-warning bg-warning/10 border-warning/20",
     poor: "text-destructive bg-destructive/10 border-destructive/20",
   };
+  const inputLogs = [
+    {
+      id: 54,
+      level: "Debug" as const,
+      time: "4m ago",
+      source: "testdata/input.log",
+      message: "DEBUG time:2024-01-25 19:00:00 host:127.0.0.1 status:200 method:GET",
+    },
+    {
+      id: 53,
+      level: "Info" as const,
+      time: "4m ago",
+      source: "testdata/input.log",
+      message: "INFO time:2024-01-25 19:00:00 host:127.0.0.1 status:200 method:GET",
+    },
+    {
+      id: 52,
+      level: "Warn" as const,
+      time: "4m ago",
+      source: "testdata/input.log",
+      message: "WARN time:2024-01-25 19:00:00 host:127.0.0.1 bitrate:1420k buffer:74%",
+    },
+    {
+      id: 51,
+      level: "Error" as const,
+      time: "5m ago",
+      source: "testdata/input.log",
+      message: "ERROR time:2024-01-25 18:59:00 host:127.0.0.1 packet-loss:3.4% jitter:29ms",
+    },
+    {
+      id: 50,
+      level: "Info" as const,
+      time: "6m ago",
+      source: "testdata/input.log",
+      message: "INFO time:2024-01-25 18:58:00 host:127.0.0.1 reconnect:ok region:ap-south-1",
+    },
+    {
+      id: 49,
+      level: "Debug" as const,
+      time: "7m ago",
+      source: "testdata/input.log",
+      message: "DEBUG time:2024-01-25 18:57:00 host:127.0.0.1 queue-depth:12 processing-ms:18",
+    },
+  ];
 
   return (
-    <div className="h-full rounded-2xl border border-border/70 bg-card p-4">
-      <div className="h-full flex flex-col">
-        <div className="mb-2">
+    <div className="h-full min-h-0 rounded-2xl border border-border/70 bg-card p-4">
+      <div className="h-full min-h-0 flex flex-col">
+        <div className="mb-2 flex items-center justify-between gap-2 min-w-0">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground">Input</h2>
+          <span
+            className={`shrink-0 whitespace-nowrap px-3 py-0.5 rounded-full text-xs font-semibold border ${healthTextColor[inputData.streamHealth]}`}
+          >
+            Healthy
+          </span>
         </div>
 
         <div className="space-y-2 mb-3">
@@ -44,57 +89,77 @@ export function EventHealthColumn() {
 
         </div>
 
-        <ScrollArea className="flex-1 -mr-2 pr-2">
-          <Accordion type="multiple" defaultValue={["input-details"]} className="space-y-3">
-            <AccordionItem value="input-details" className="border-none bg-card rounded-xl px-3">
-              <AccordionTrigger className="py-2 hover:no-underline">
-                <span className="text-xs font-semibold uppercase tracking-wide">Input Details</span>
-              </AccordionTrigger>
-              <AccordionContent className="pb-3 pt-1">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="col-span-2 p-2 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground uppercase">Status</span>
-                    <span className={`px-1.5 py-0.5 rounded-sm text-xs font-bold border ${healthTextColor[inputData.streamHealth]}`}>
-                      Healthy
+        <div className="pr-2 min-h-0 flex-1">
+          <div className="h-full min-h-0 rounded-xl border border-border/60 bg-card p-3 flex flex-col">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 whitespace-nowrap overflow-x-auto custom-scrollbar hover-scrollbar min-w-0">
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium">
+                      <ExternalLink className="w-2.5 h-2.5 text-muted-foreground" />
+                      {inputData.inputMode}
                     </span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-muted/30 border border-border/30">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <ExternalLink className="w-3 h-3" />
-                      <span className="text-xs uppercase">Input</span>
-                    </div>
-                    <div className="mt-2 text-xs font-semibold">{inputData.inputMode}</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-muted/30 border border-border/30">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Eye className="w-3 h-3" />
-                      <span className="text-xs uppercase">Resolution</span>
-                    </div>
-                    <div className="mt-2 text-xs font-semibold">{inputData.dimension}</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-muted/30 border border-border/30">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Play className="w-3 h-3" />
-                      <span className="text-xs uppercase">FPS</span>
-                    </div>
-                    <div className="mt-2 text-xs font-semibold">{inputData.frameRate}</div>
-                  </div>
-                  <div className="col-span-2 p-2 rounded-lg bg-muted/30 border border-border/30">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Activity className="w-3 h-3" />
-                      <span className="text-xs uppercase">Bitrate</span>
-                      <span className="text-xs normal-case">(Cur / Avg)</span>
-                    </div>
-                    <div className="mt-1 text-xs font-semibold font-mono tabular-nums leading-tight break-words">
-                      {inputData.bitrateCurrent}/{inputData.bitrateAverage}
-                      <span className="ml-1 text-xs text-muted-foreground">kbps</span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </ScrollArea>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Input mode: {inputData.inputMode}</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium">
+                      <Eye className="w-2.5 h-2.5 text-muted-foreground" />
+                      {inputData.dimension}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Resolution: {inputData.dimension}</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium">
+                      <Play className="w-2.5 h-2.5 text-muted-foreground" />
+                      {inputData.frameRate} FPS
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Frame rate: {inputData.frameRate} FPS</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium font-mono tabular-nums">
+                      <Activity className="w-2.5 h-2.5 text-muted-foreground" />
+                      {inputData.bitrateCurrent}/{inputData.bitrateAverage}k
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Bitrate current/avg: {inputData.bitrateCurrent}/{inputData.bitrateAverage}k</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              </div>
+              <div className="shrink-0">
+                <LogPreviewDialog
+                  title="Input Logs"
+                  description="Expanded view for input stream logs."
+                  logs={inputLogs}
+                  emptyMessage="No input logs available"
+                  iconOnly
+                  triggerClassName="h-6 w-6 bg-background/90"
+                />
+              </div>
+            </div>
+            <LiveLogTable
+              logs={inputLogs}
+              emptyMessage="No input logs available"
+              tableHeight="h-[220px]"
+              showTitle={false}
+              bordered={false}
+              className="min-h-0 flex-1 flex flex-col"
+              tableContainerClassName="mt-2 min-h-0 flex-1"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

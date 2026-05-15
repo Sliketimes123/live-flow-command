@@ -6,11 +6,39 @@ import { EventHealthColumn } from "@/components/dashboard/EventHealthColumn";
 import { OutputHealthColumn } from "@/components/dashboard/OutputHealthColumn";
 import { RightModerationPanel } from "@/components/dashboard/RightModerationPanel";
 import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation/ChatModeration";
+import {
+  buildModerationViewPath,
+  DEFAULT_EVENT_ID,
+  saveModerationSession,
+  type ModerationTab,
+} from "@/lib/moderationSession";
+
+type SocialDestination = {
+  id: string;
+  channelName: string;
+  description: string;
+  status: "ONLINE" | "OFFLINE";
+  platform: "YouTube" | "Facebook";
+  logo: string;
+  logoColor: string;
+  textColor: string;
+  subText: string;
+  subTextColor: string;
+  isPublished: boolean;
+};
+
+/** Default width for expanded right moderation panel (px). */
+const DEFAULT_MODERATION_COL_FRAC = 0.26;
+
+/** Collapsed right section: ~52px rail + outer card border/padding */
+const RIGHT_SECTION_COLLAPSED_PX = 60;
+
+const EVENT_ID = DEFAULT_EVENT_ID;
 
 const Index = () => {
-  const MIN_LEFT_WIDTH = 280;
-  const MIN_MIDDLE_WIDTH = 280;
   const MIN_RIGHT_WIDTH = 360;
+  /** One `w-1` resizer + two `gap-2` gutters when the right panel is expanded. */
+  const MAIN_ROW_FIXED_CHROME_PX = 4 + 2 * 8;
 
   const navigate = useNavigate();
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -41,7 +69,6 @@ const Index = () => {
   const [alertBadges, setAlertBadges] = useState({
     comments: 0,
     studio: 0,
-    private: 0,
     qa: 0,
   });
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -84,9 +111,63 @@ const Index = () => {
       blockedAt: "2:34 PM",
     },
   ]);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(0);
   const [rightPanelWidth, setRightPanelWidth] = useState(0);
-  const [resizingSide, setResizingSide] = useState<"left" | "right" | null>(null);
+  const [isRightContentCollapsed, setIsRightContentCollapsed] = useState(false);
+  const [resizingSide, setResizingSide] = useState<"right" | null>(null);
+  const [socialDestinations] = useState<SocialDestination[]>([
+    {
+      id: "1",
+      channelName: "NBT UP-Uttarakhand",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR Vote Chori | Rahul Gandhi",
+      status: "ONLINE",
+      platform: "YouTube",
+      logo: "NBT",
+      logoColor: "bg-black",
+      textColor: "text-white",
+      subText: "यूपी-उत्तराखंड",
+      subTextColor: "text-red-600",
+      isPublished: true,
+    },
+    {
+      id: "2",
+      channelName: "Navbharat Times नवभारत",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
+      status: "ONLINE",
+      platform: "YouTube",
+      logo: "NBT",
+      logoColor: "bg-red-600",
+      textColor: "text-white",
+      subText: "नवभारत टाइम्स",
+      subTextColor: "text-white",
+      isPublished: true,
+    },
+    {
+      id: "3",
+      channelName: "Navbharat Times Online",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
+      status: "ONLINE",
+      platform: "Facebook",
+      logo: "p",
+      logoColor: "bg-gray-400",
+      textColor: "text-white",
+      subText: "",
+      subTextColor: "",
+      isPublished: true,
+    },
+    {
+      id: "4",
+      channelName: "NBT Uttar Pradesh",
+      description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
+      status: "ONLINE",
+      platform: "Facebook",
+      logo: "p",
+      logoColor: "bg-gray-400",
+      textColor: "text-white",
+      subText: "",
+      subTextColor: "",
+      isPublished: true,
+    },
+  ]);
 
   // Simulate elapsed time
   useEffect(() => {
@@ -196,7 +277,7 @@ const Index = () => {
     title: string,
     description: string,
     severity: "info" | "warning" | "critical",
-    targetTabs: Array<"comments" | "studio" | "private" | "qa"> = []
+    targetTabs: Array<"comments" | "studio" | "qa"> = []
   ) => {
     setNotificationFeed((prev) => [
       {
@@ -308,7 +389,7 @@ const Index = () => {
     );
   };
 
-  const handleTabViewed = (tab: "comments" | "studio" | "private" | "qa") => {
+  const handleTabViewed = (tab: "comments" | "qa" | "studio") => {
     setAlertBadges((prev) => ({ ...prev, [tab]: 0 }));
   };
 
@@ -320,6 +401,28 @@ const Index = () => {
     // Copy functionality is handled in ChatModeration component
     // This callback can be used for logging or analytics
     console.log("Message copied:", message);
+  };
+
+  const handleOpenModerationView = (activeTab: ModerationTab) => {
+    saveModerationSession({
+      eventId: EVENT_ID,
+      eventTitle: "Live Event – Global Summit",
+      isLive,
+      isPaused,
+      elapsedTime,
+      concurrentUsers,
+      totalUsers,
+      audienceCountEnabled,
+      commentsEnabled,
+      qnaEnabled,
+      publishingHealth,
+      messages: filteredMessages,
+      blockedUsers,
+      notifications: notificationFeed,
+      theme,
+      activeTab,
+    });
+    window.open(buildModerationViewPath(EVENT_ID, activeTab), "_blank", "noopener,noreferrer");
   };
 
   // Use all messages (no filtering needed)
@@ -344,15 +447,27 @@ const Index = () => {
       const containerWidth = container.clientWidth;
       if (containerWidth <= 0) return;
 
-      const nextLeft = Math.max(MIN_LEFT_WIDTH, Math.floor(containerWidth * 0.3));
-      const nextRight = Math.max(MIN_RIGHT_WIDTH, Math.floor(containerWidth * 0.36));
-      setLeftPanelWidth(nextLeft);
-      setRightPanelWidth(nextRight);
+      const inner = containerWidth - MAIN_ROW_FIXED_CHROME_PX;
+      if (inner <= 0) return;
+
+      const right = Math.max(MIN_RIGHT_WIDTH, Math.round(inner * DEFAULT_MODERATION_COL_FRAC));
+      setRightPanelWidth(right);
     };
 
     initializePanelWidths();
     window.addEventListener("resize", initializePanelWidths);
     return () => window.removeEventListener("resize", initializePanelWidths);
+  }, []);
+
+  /** Default collapsed on narrow viewports to give main columns more room */
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1100px)");
+    const apply = () => {
+      if (mq.matches) setIsRightContentCollapsed(true);
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   useEffect(() => {
@@ -363,14 +478,11 @@ const Index = () => {
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
-      const maxLeft = rect.width - rightPanelWidth - MIN_MIDDLE_WIDTH;
-      const maxRight = rect.width - leftPanelWidth - MIN_MIDDLE_WIDTH;
+      const inner = rect.width - MAIN_ROW_FIXED_CHROME_PX;
+      const playerAreaMin = 560;
+      const maxRight = inner - playerAreaMin;
 
-      if (resizingSide === "left") {
-        const proposed = event.clientX - rect.left;
-        const clamped = Math.min(Math.max(proposed, MIN_LEFT_WIDTH), Math.max(MIN_LEFT_WIDTH, maxLeft));
-        setLeftPanelWidth(clamped);
-      } else {
+      if (!isRightContentCollapsed) {
         const proposed = rect.right - event.clientX;
         const clamped = Math.min(Math.max(proposed, MIN_RIGHT_WIDTH), Math.max(MIN_RIGHT_WIDTH, maxRight));
         setRightPanelWidth(clamped);
@@ -392,7 +504,11 @@ const Index = () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [resizingSide, leftPanelWidth, rightPanelWidth]);
+  }, [resizingSide, rightPanelWidth, isRightContentCollapsed]);
+
+  const rightSectionWidthPx = isRightContentCollapsed
+    ? RIGHT_SECTION_COLLAPSED_PX
+    : rightPanelWidth || MIN_RIGHT_WIDTH;
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -401,7 +517,7 @@ const Index = () => {
         isLive={isLive}
         isPaused={isPaused}
         eventTitle="Live Event – Global Summit"
-        eventId="npn57jcgzzo"
+        eventId={EVENT_ID}
         elapsedTime={elapsedTime}
         concurrentUsers={concurrentUsers}
         totalUsers={totalUsers}
@@ -421,41 +537,47 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden p-3 min-w-0 min-h-0">
-        <div ref={mainContentRef} className="h-full flex min-w-0 min-h-0 items-stretch gap-2">
-        <section
-          className="min-w-[280px] overflow-visible min-h-0"
-          style={{ width: leftPanelWidth || undefined }}
+        <div
+          ref={mainContentRef}
+          className="grid h-full min-h-0 min-w-0 w-full items-stretch gap-2"
+          style={{
+            gridTemplateColumns: isRightContentCollapsed
+              ? `minmax(0, 1fr) ${RIGHT_SECTION_COLLAPSED_PX}px`
+              : `minmax(0, 1fr) 4px ${rightSectionWidthPx}px`,
+          }}
         >
-          <EventHealthColumn />
-        </section>
+        <div className="grid min-h-0 min-w-0 grid-cols-1 gap-4 overflow-visible min-[1101px]:grid-cols-2">
+          <section className="min-h-0 min-w-0 overflow-visible">
+            <EventHealthColumn />
+          </section>
+          <section className="min-h-0 min-w-0 overflow-visible">
+            <OutputHealthColumn
+              publishingHealth={publishingHealth}
+              socialDestinations={socialDestinations}
+            />
+          </section>
+        </div>
 
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize left panel"
-          onMouseDown={() => setResizingSide("left")}
-          className="w-1 shrink-0 cursor-col-resize rounded-full bg-border/70 hover:bg-primary/60 active:bg-primary/80 transition-colors"
-        />
-
-        <section className="flex-1 min-w-[280px] overflow-visible min-h-0">
-          <OutputHealthColumn
-            publishingHealth={publishingHealth}
+        {!isRightContentCollapsed && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize right panel"
+            onMouseDown={() => setResizingSide("right")}
+            className="w-1 cursor-col-resize rounded-full bg-border/70 transition-colors hover:bg-primary/60 active:bg-primary/80"
           />
-        </section>
-
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize right panel"
-          onMouseDown={() => setResizingSide("right")}
-          className="w-1 shrink-0 cursor-col-resize rounded-full bg-border/70 hover:bg-primary/60 active:bg-primary/80 transition-colors"
-        />
+        )}
 
         <section
-          className="min-w-[360px] overflow-hidden min-h-0"
-          style={{ width: rightPanelWidth || undefined }}
+          className={`min-h-0 overflow-hidden transition-[width,opacity] duration-200 ease-in-out ${
+            isRightContentCollapsed ? "min-w-0" : "min-w-[360px]"
+          }`}
+          style={{ width: isRightContentCollapsed ? RIGHT_SECTION_COLLAPSED_PX : undefined }}
         >
           <RightModerationPanel
+            eventId={EVENT_ID}
+            contentCollapsed={isRightContentCollapsed}
+            onContentCollapsedChange={setIsRightContentCollapsed}
             messages={filteredMessages}
             blockedUsers={blockedUsers}
             onBlockUser={handleBlockUser}
@@ -506,6 +628,8 @@ const Index = () => {
         viewType={viewType}
         activeSource={activeSource}
         commentsEnabled={commentsEnabled}
+        onOpenModerationPanel={() => handleOpenModerationView("comments")}
+        socialDestinations={socialDestinations}
       />
     </div>
   );

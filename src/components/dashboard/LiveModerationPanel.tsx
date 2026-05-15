@@ -574,8 +574,13 @@ export function LiveModerationPanel({
                             <TooltipProvider delayDuration={300}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted" onClick={handleOpenPreview}>
-                                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full hover:bg-muted text-muted-foreground hover:text-black"
+                                    onClick={handleOpenPreview}
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent><p>Open Preview</p></TooltipContent>
@@ -583,8 +588,8 @@ export function LiveModerationPanel({
                             </TooltipProvider>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted">
-                                  <MoreVertical className="w-3 h-3 text-muted-foreground" />
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted text-muted-foreground hover:text-black">
+                                  <MoreVertical className="w-3 h-3" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">

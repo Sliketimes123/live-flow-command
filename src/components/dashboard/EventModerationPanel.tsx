@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatModeration, type ChatMessage, type BlockedUser } from "./moderation/ChatModeration";
 import { QAPanel } from "./moderation/QAPanel";
-import { MessageSquare, Lock, Users, HelpCircle } from "lucide-react";
+import { MessageSquare, Lock, HelpCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface EventModerationPanelProps {
@@ -19,7 +19,7 @@ interface EventModerationPanelProps {
   qnaEnabled?: boolean;
   onQuestionMetricsChange?: (metrics: { total: number; queue: number; selected: number; closed: number }) => void;
   onQASpike?: (payload: { increaseBy: number; queueCount: number }) => void;
-  onTabViewed?: (tab: "comments" | "studio" | "private" | "qa") => void;
+  onTabViewed?: (tab: "comments" | "qa" | "studio") => void;
 }
 
 export function EventModerationPanel({
@@ -39,18 +39,14 @@ export function EventModerationPanel({
   onQASpike,
   onTabViewed,
 }: EventModerationPanelProps) {
-  // Lift auto-scroll state to parent to persist across tab switches
-  // These states persist independently for each tab
-  // Default to disabled (false)
   const [commentsAutoScroll, setCommentsAutoScroll] = useState(false);
   const [studioAutoScroll, setStudioAutoScroll] = useState(false);
   const [activeTab, setActiveTab] = useState("comments");
   const [studioCount, setStudioCount] = useState(0);
-  const [privateCount, setPrivateCount] = useState(0);
   const [qaQueueCount, setQaQueueCount] = useState(0);
   const commentsCount = messages.length;
 
-  const getCountBadgeClass = (tab: "comments" | "studio" | "private" | "qa") =>
+  const getCountBadgeClass = (tab: "comments" | "qa" | "studio") =>
     activeTab === tab
       ? "ml-1.5 inline-flex min-w-[20px] justify-center rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] leading-none font-semibold text-primary border border-primary/40"
       : "ml-1.5 inline-flex min-w-[20px] justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none font-medium text-muted-foreground border border-border/60";
@@ -65,7 +61,7 @@ export function EventModerationPanel({
   }, [activeTab, commentsEnabled, qnaEnabled]);
 
   useEffect(() => {
-    onTabViewed?.(activeTab as "comments" | "studio" | "private" | "qa");
+    onTabViewed?.(activeTab as "comments" | "qa" | "studio");
   }, [activeTab, onTabViewed]);
 
   return (
@@ -80,16 +76,6 @@ export function EventModerationPanel({
                 <span className={getCountBadgeClass("comments")}>{commentsCount}</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="studio" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Lock className="w-3.5 h-3.5 mr-2" />
-              Studio Chat
-              <span className={getCountBadgeClass("studio")}>{studioCount}</span>
-            </TabsTrigger>
-            <TabsTrigger value="private" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Users className="w-3.5 h-3.5 mr-2" />
-              Private Chat
-              <span className={getCountBadgeClass("private")}>{privateCount}</span>
-            </TabsTrigger>
             {qnaEnabled && (
               <TabsTrigger value="qa" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <HelpCircle className="w-3.5 h-3.5 mr-2" />
@@ -97,6 +83,11 @@ export function EventModerationPanel({
                 <span className={getCountBadgeClass("qa")}>{qaQueueCount}</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="studio" className="flex-1 text-xs h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Lock className="w-3.5 h-3.5 mr-2" />
+              Studio Chat
+              <span className={getCountBadgeClass("studio")}>{studioCount}</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -104,6 +95,7 @@ export function EventModerationPanel({
           {commentsEnabled && (
             <TabsContent value="comments" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
               <ChatModeration
+                variant="moderation"
                 messages={messages}
                 blockedUsers={blockedUsers}
                 onBlockUser={onBlockUser}
@@ -121,8 +113,24 @@ export function EventModerationPanel({
             </TabsContent>
           )}
 
+          {qnaEnabled && (
+            <TabsContent value="qa" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
+              <QAPanel
+                variant="moderation"
+                onBlockUser={onBlockUser}
+                blockedUsers={blockedUsers}
+                onQuestionMetricsChange={(metrics) => {
+                  setQaQueueCount(metrics.queue);
+                  onQuestionMetricsChange?.(metrics);
+                }}
+                onQASpike={onQASpike}
+              />
+            </TabsContent>
+          )}
+
           <TabsContent value="studio" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
             <ChatModeration
+              variant="moderation"
               messages={messages}
               blockedUsers={blockedUsers}
               onBlockUser={onBlockUser}
@@ -138,36 +146,6 @@ export function EventModerationPanel({
               onMessageCountChange={setStudioCount}
             />
           </TabsContent>
-
-          <TabsContent value="private" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
-            <ChatModeration
-              messages={messages}
-              blockedUsers={blockedUsers}
-              onBlockUser={onBlockUser}
-              onUnblockUser={onUnblockUser}
-              onToggleHide={onToggleHide}
-              onTogglePin={onTogglePin}
-              onToggleSelect={onToggleSelect}
-              onCopy={onCopy}
-              onDeleteMessage={onDeleteMessage}
-              activeTab="private"
-              onMessageCountChange={setPrivateCount}
-            />
-          </TabsContent>
-
-          {qnaEnabled && (
-            <TabsContent value="qa" className="mt-0 h-full data-[state=inactive]:hidden pt-0">
-              <QAPanel
-                onBlockUser={onBlockUser}
-                blockedUsers={blockedUsers}
-                onQuestionMetricsChange={(metrics) => {
-                  setQaQueueCount(metrics.queue);
-                  onQuestionMetricsChange?.(metrics);
-                }}
-                onQASpike={onQASpike}
-              />
-            </TabsContent>
-          )}
         </div>
       </Tabs>
     </div>

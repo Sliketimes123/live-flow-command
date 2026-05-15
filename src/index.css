@@ -206,6 +206,22 @@ All colors MUST be HSL.
   background: hsl(var(--primary) / 0.75);
 }
 
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: hsl(var(--background));
+}
+
+/* Stream column header: horizontal overflow without visible scrollbar */
+.header-badge-strip {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.header-badge-strip::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Scrollbar appears only when hovered */
 .hover-scrollbar {
   scrollbar-width: none;

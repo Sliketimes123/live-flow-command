@@ -35,6 +35,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface DashboardHeaderProps {
+  /** `moderation` hides live/recording control actions (dedicated moderation workspace). */
+  mode?: "admin" | "moderation";
   isLive: boolean;
   isPaused?: boolean;
   eventTitle: string;
@@ -64,6 +66,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({
+  mode = "admin",
   isLive,
   isPaused = false,
   eventTitle,
@@ -130,39 +133,35 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="h-12 border-b border-border/70 bg-card px-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
+    <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/70 bg-card px-3">
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           onClick={handleBackClick}
           variant="ghost"
           size="sm"
-          className="group h-7 w-7 p-0"
+          className="group h-7 w-7 shrink-0 p-0"
           title="Go back"
         >
-          <ChevronLeft className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-white group-focus-visible:text-white" />
+          <ChevronLeft className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground group-focus-visible:text-foreground" />
         </Button>
-        <div className="h-4 w-px bg-border" />
-        <h1 className="text-sm font-semibold text-foreground">{eventTitle}</h1>
+        <div className="h-3.5 w-px shrink-0 bg-border" />
+        <h1 className="truncate text-sm font-semibold leading-tight text-foreground">{eventTitle}</h1>
         {eventId && (
           <>
-            <div className="h-4 w-px bg-border" />
+            <div className="hidden h-3.5 w-px shrink-0 bg-border sm:block" />
             <TooltipProvider delayDuration={300}>
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleCopy(eventId, "Event ID")}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
+                    className="group hidden max-w-[min(12rem,28vw)] shrink-0 items-center gap-1 rounded border border-border bg-muted/30 px-1.5 py-0.5 transition-colors hover:bg-muted/50 sm:flex"
                   >
-                    <img 
-                      src="/slike_mini.svg" 
-                      alt="Event ID Logo" 
-                      className="w-4 h-4 flex-shrink-0"
-                    />
-                    <span className="font-mono text-xs">{eventId}</span>
+                    <img src="/slike_mini.svg" alt="" className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate font-mono text-[11px]">{eventId}</span>
                     {copiedField === "Event ID" ? (
-                      <Check className="w-3 h-3 text-primary" />
+                      <Check className="h-3 w-3 shrink-0 text-primary" />
                     ) : (
-                      <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                     )}
                   </button>
                 </TooltipTrigger>
@@ -175,22 +174,22 @@ export function DashboardHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
         {/* User Counts + Notifications */}
-        <div className="flex items-center gap-3 border-r border-border pr-4">
+        <div className="flex items-center gap-2 border-r border-border pr-2 sm:gap-2.5 sm:pr-3">
           {audienceCountEnabled && (
             <>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-foreground">{concurrentUsers}</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1">
+                  <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-xs font-semibold tabular-nums text-foreground">{concurrentUsers}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-foreground">{totalUsers}</span>
+                <div className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-xs font-semibold tabular-nums text-foreground">{totalUsers}</span>
                 </div>
               </div>
-              <div className="h-4 w-px bg-border" />
+              <div className="hidden h-3.5 w-px bg-border sm:block" />
             </>
           )}
           <Dialog
@@ -201,8 +200,8 @@ export function DashboardHeader({
             }}
           >
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" title="Notifications">
-                <Bell className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-white group-focus-visible:text-white" />
+              <Button variant="ghost" size="sm" className="relative h-7 w-7 shrink-0 p-0" title="Notifications">
+                <Bell className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-foreground" />
                 {unreadNotificationCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
                     {unreadNotificationCount}
@@ -250,43 +249,43 @@ export function DashboardHeader({
         </div>
 
         {/* Live Status and Timer */}
-        <div className="flex items-center gap-3 border-r border-border pr-4">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 border-r border-border pr-2 sm:gap-2.5 sm:pr-3">
+          <div className="flex items-center gap-1">
             <div
-              className={`w-2 h-2 rounded-full ${
-                isLive ? "bg-status-live animate-pulse-glow glow-live" : 
-                isPaused ? "bg-yellow-500" : "bg-status-offline"
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                isLive ? "bg-status-live animate-pulse-glow glow-live" : isPaused ? "bg-yellow-500" : "bg-status-offline"
               }`}
             />
-            <span className="text-xs font-semibold uppercase tracking-wide">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
               {isLive ? "LIVE" : isPaused ? "PAUSED" : "OFFLINE"}
             </span>
           </div>
 
-          <div className="text-xs font-mono text-muted-foreground px-2 py-0.5 surface-elevated rounded">
+          <div className="surface-elevated rounded px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground tabular-nums">
             {elapsedTime}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center">
+        {/* Action Buttons — admin panel only */}
+        {mode === "admin" && (
+        <div className="flex items-center gap-0.5">
           <button
             onClick={handleRecordingClick}
-            className="h-7 px-3 rounded-md text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-7 shrink-0 rounded-md px-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!isLive && !isPaused}
           >
             {isRecording ? "STOP REC" : "START REC"}
           </button>
-          <div className="h-4 w-px bg-border mx-1" />
-          
+          <div className="mx-0.5 hidden h-3.5 w-px bg-border sm:block" />
+
           {/* Live Control Button with Dropdown */}
           {isLive ? (
             // Condition 1: When Live is active, show "STOP LIVE" with dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-7 px-3 text-xs font-semibold text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1">
+                <button className="flex h-7 shrink-0 items-center gap-0.5 rounded-md px-2 text-[11px] font-semibold text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive">
                   STOP LIVE
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="h-3 w-3" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -311,9 +310,9 @@ export function DashboardHeader({
             // Condition 2: When Paused, show "PAUSE LIVE" with dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-7 px-3 text-xs font-semibold text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1">
+                <button className="flex h-7 shrink-0 items-center gap-0.5 rounded-md px-2 text-[11px] font-semibold text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive">
                   PAUSE LIVE
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="h-3 w-3" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -338,12 +337,13 @@ export function DashboardHeader({
             // Condition 3: When stopped, show "START LIVE" button (direct action)
             <button
               onClick={onStart}
-              className="h-7 px-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              className="h-7 shrink-0 rounded-md px-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
             >
               START LIVE
             </button>
           )}
         </div>
+        )}
       </div>
 
       {/* End Event Warning Dialog */}

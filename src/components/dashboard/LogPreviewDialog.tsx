@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +8,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LiveLogTable, type LiveLog } from "./LiveLogTable";
 
 interface LogPreviewDialogProps {
@@ -33,44 +31,32 @@ export function LogPreviewDialog({
 }: LogPreviewDialogProps) {
   return (
     <Dialog>
-      {iconOnly ? (
-        <TooltipProvider delayDuration={150}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={`h-7 w-7 ${triggerClassName}`}
-                  aria-label={`Preview ${title}`}
-                >
-                  <Expand className="h-3.5 w-3.5" />
-                </Button>
-              </DialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Open expanded log preview</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      ) : (
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className={`h-6 px-2 text-[10px] ${triggerClassName}`}>
-            <Expand className="h-3 w-3" />
-            Preview
-          </Button>
-        </DialogTrigger>
-      )}
-      <DialogContent className="w-[92vw] max-w-6xl p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="text-sm uppercase tracking-wide">{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={
+            iconOnly
+              ? `h-7 shrink-0 px-2.5 text-[10px] font-medium text-muted-foreground hover:text-foreground ${triggerClassName}`
+              : `h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground ${triggerClassName}`
+          }
+          aria-label={`Show details: ${title}`}
+        >
+          Show Details
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[min(92vh,44rem)] w-[min(100vw-1.5rem,40rem)] max-w-[95vw] flex-col gap-3 overflow-hidden p-4 sm:gap-4 sm:p-5">
+        <DialogHeader className="shrink-0 space-y-1 pr-10 text-left">
+          <DialogTitle className="text-sm font-semibold tracking-wide text-foreground">{title}</DialogTitle>
+          <DialogDescription className="text-xs leading-snug text-muted-foreground">
+            {description}
+          </DialogDescription>
         </DialogHeader>
         <LiveLogTable
           title={title}
           logs={logs}
           emptyMessage={emptyMessage}
-          tableHeight="h-[65vh]"
+          tableHeight="max-h-[min(calc(92vh-10.5rem),24rem)]"
           showTitle={false}
           bordered={true}
           extraContent={extraContent}

@@ -117,17 +117,12 @@ export function ChatModeration({
   const { toast } = useToast();
 
   const scrollToBottom = (ref: RefObject<HTMLDivElement | null>) => {
-    if (ref.current) {
-      // Find the ScrollArea viewport by traversing up from the content div
-      const scrollAreaRoot = ref.current.closest('[data-radix-scroll-area-root]');
-      if (scrollAreaRoot) {
-        const viewport = scrollAreaRoot.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-        if (viewport) {
-          // Use scrollTop for immediate scroll (better for auto-scroll)
-          viewport.scrollTop = viewport.scrollHeight;
-        }
-      }
-    }
+    if (!ref.current) return;
+    const radixViewport = ref.current.closest(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+    const scrollEl = radixViewport ?? ref.current;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
   };
 
   // Separate state for Studio Chat messages

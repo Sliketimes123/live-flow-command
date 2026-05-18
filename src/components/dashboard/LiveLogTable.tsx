@@ -24,9 +24,9 @@ interface LiveLogTableProps {
 }
 
 const severityClass: Record<LiveLog["level"], string> = {
-  Info: "border border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb] dark:border-blue-800 dark:bg-blue-950/55 dark:text-blue-300",
-  Warn: "border border-[#fde68a] bg-[#fffbeb] text-[#b45309] dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-300",
-  Error: "border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] dark:border-red-900 dark:bg-red-950/45 dark:text-red-400",
+  Info: "font-semibold text-[#2563eb] dark:text-blue-300",
+  Warn: "font-semibold text-[#b45309] dark:text-amber-300",
+  Error: "font-semibold text-[#dc2626] dark:text-red-400",
 };
 
 const levelLabel: Record<LiveLog["level"], string> = {
@@ -39,13 +39,12 @@ const expandedRowGrid =
   "grid w-full grid-cols-[4.5rem_2.75rem_9rem_minmax(0,1fr)] items-center gap-x-3 px-1.5 py-1 text-[11px] leading-[1.35] tracking-[-0.1px] font-mono";
 
 const compactRowGrid =
-  "grid grid-cols-[72px_64px_minmax(0,1fr)] items-center gap-2.5 px-1.5 py-1 text-xs leading-[1.35] tracking-[-0.1px] font-mono";
+  "grid grid-cols-[4.25rem_2.25rem_minmax(0,1fr)] items-center gap-x-1 gap-y-0 px-1.5 py-1 text-xs leading-[1.35] tracking-[-0.1px] font-mono";
 
 const expandedSeverityClass =
-  "inline-flex h-[18px] w-[44px] shrink-0 items-center justify-center rounded px-[5px] text-[10px] font-bold uppercase";
+  "shrink-0 justify-self-center text-center text-[10px] font-bold uppercase tabular-nums";
 
-const compactSeverityClass =
-  "inline-flex h-5 min-w-[52px] shrink-0 items-center justify-center rounded-md px-1.5 text-[10px] font-bold uppercase";
+const compactSeverityClass = "shrink-0 text-center text-[10px] font-bold uppercase tabular-nums";
 
 function compactPreviewText(log: LiveLog): string {
   if (log.previewMessage?.trim()) return log.previewMessage.trim();
@@ -99,7 +98,9 @@ function MonitoringLogRowsCompact({ logs }: { logs: LiveLog[] }) {
             key={log.id}
             className={`${compactRowGrid} rounded-md border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] dark:border-border/30 dark:hover:bg-muted/25`}
           >
-            <span className="w-[72px] shrink-0 font-medium text-[#64748b] dark:text-slate-400">{log.time}</span>
+            <span className="min-w-0 shrink-0 whitespace-nowrap font-medium text-[#64748b] dark:text-slate-400">
+              {log.time}
+            </span>
             <span className={`${compactSeverityClass} ${severityClass[log.level]}`}>{levelLabel[log.level]}</span>
             <span
               className="min-w-0 truncate font-normal text-[#475569] dark:text-slate-400"

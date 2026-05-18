@@ -9,13 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,10 +101,6 @@ export function QAPanel({
     },
   ]);
 
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedQuestionForAssign, setSelectedQuestionForAssign] = useState<string | null>(null);
-  const [assignSearchQuery, setAssignSearchQuery] = useState("");
-  const [selectedParticipant, setSelectedParticipant] = useState<string>("");
   const [recentQueueIncreaseAt, setRecentQueueIncreaseAt] = useState<number[]>([]);
 
   // Mock participants list
@@ -122,12 +112,6 @@ export function QAPanel({
     "Jane Smith",
     "Admin User",
   ], []);
-
-  const filteredParticipants = useMemo(() => {
-    if (!assignSearchQuery.trim()) return participants;
-    const query = assignSearchQuery.toLowerCase();
-    return participants.filter((p) => p.toLowerCase().includes(query));
-  }, [participants, assignSearchQuery]);
 
   const toggleApproval = (id: string) => {
     setQuestions((prev) =>
@@ -177,30 +161,16 @@ export function QAPanel({
     );
   };
 
-  const handleAssignClick = (id: string) => {
-    setSelectedQuestionForAssign(id);
-    setIsAssignDialogOpen(true);
-    setSelectedParticipant("");
-    setAssignSearchQuery("");
-  };
-
-  const handleAssignQuestion = () => {
-    if (selectedQuestionForAssign && selectedParticipant) {
-      setQuestions((prev) =>
-        prev.map((q) =>
-          q.id === selectedQuestionForAssign
-            ? { ...q, assignedTo: selectedParticipant, status: "selected" as const }
-            : q
-        )
-      );
-      toast({
-        title: "Question Assigned",
-        description: `Question moved to Selected and assigned to ${selectedParticipant}`,
-      });
-      setIsAssignDialogOpen(false);
-      setSelectedQuestionForAssign(null);
-      setSelectedParticipant("");
-    }
+  const handleAssignQuestion = (questionId: string, participant: string) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === questionId ? { ...q, assignedTo: participant, status: "selected" as const } : q,
+      ),
+    );
+    toast({
+      title: "Question Assigned",
+      description: `Question moved to Selected and assigned to ${participant}`,
+    });
   };
 
   const handleCopy = (questionId: string, question: string) => {
@@ -333,7 +303,7 @@ export function QAPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
-        !isSidebar && "rounded-xl border border-border/35 bg-card/30 p-2 shadow-sm backdrop-blur-[2px]",
+        !isSidebar && "rounded-xl border border-border/35 bg-card/30 p-1.5 shadow-sm backdrop-blur-[2px]",
         isSidebar && "min-h-0 flex-1",
       )}
     >
@@ -403,7 +373,8 @@ export function QAPanel({
                     question={q}
                     onSelect={handleSelectQuestion}
                     onSkip={handleSkipQuestion}
-                    onAssign={handleAssignClick}
+                    participants={participants}
+                    onAssignQuestion={handleAssignQuestion}
                     onCopy={handleCopy}
                     onBlockUser={handleBlockRequest}
                     onDelete={handleDeleteQuestion}
@@ -436,7 +407,8 @@ export function QAPanel({
                     question={q}
                     onQueue={handleQueueQuestion}
                     onSkip={handleSkipQuestion}
-                    onAssign={handleAssignClick}
+                    participants={participants}
+                    onAssignQuestion={handleAssignQuestion}
                     onCopy={handleCopy}
                     onBlockUser={handleBlockRequest}
                     onDelete={handleDeleteQuestion}
@@ -469,7 +441,8 @@ export function QAPanel({
                     question={q}
                     onSelect={handleSelectQuestion}
                     onQueue={handleQueueQuestion}
-                    onAssign={handleAssignClick}
+                    participants={participants}
+                    onAssignQuestion={handleAssignQuestion}
                     onCopy={handleCopy}
                     onBlockUser={handleBlockRequest}
                     onDelete={handleDeleteQuestion}
@@ -503,62 +476,6 @@ export function QAPanel({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Assign Question Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm">Assign Question</DialogTitle>
-            <DialogDescription className="text-xs">
-              Select a participant to assign this question to
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search User"
-                value={assignSearchQuery}
-                onChange={(e) => setAssignSearchQuery(e.target.value)}
-                className="pl-8 h-7 text-xs"
-              />
-            </div>
-
-            {/* Participants List */}
-            <ScrollArea className="h-[200px] pr-2">
-              <div className="space-y-1">
-                {filteredParticipants.map((participant) => (
-                  <button
-                    key={participant}
-                    onClick={() => setSelectedParticipant(participant)}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-colors ${selectedParticipant === participant
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border hover:bg-accent"
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <User className="w-3 h-3" />
-                      <span>{participant}</span>
-                    </div>
-                    {selectedParticipant === participant && (
-                      <Check className="w-3 h-3" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Assign Button */}
-            <Button
-              onClick={handleAssignQuestion}
-              disabled={!selectedParticipant}
-              className="w-full h-7 text-xs"
-            >
-              Assign
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -585,11 +502,124 @@ const qaBtnSkip =
 const qaBtnAssign =
   "h-7 shrink-0 rounded-lg border border-[#dbe3ef] bg-white px-3 text-xs font-semibold text-[#334155] shadow-none transition-colors hover:border-[#cbd5e1] hover:bg-[#f8fafc] gap-1 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0 [&>svg]:text-[#64748b] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40";
 
+const qaBtnAssignChevron =
+  "flex h-7 w-7 shrink-0 items-center justify-center border-l border-[#dbe3ef] text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#334155] dark:border-border dark:text-muted-foreground dark:hover:bg-muted/40";
+
+function AssignQuestionDropdown({
+  questionId,
+  participants,
+  onAssignQuestion,
+}: {
+  questionId: string;
+  participants: string[];
+  onAssignQuestion: (questionId: string, participant: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [assignSearchQuery, setAssignSearchQuery] = useState("");
+  const [selectedParticipant, setSelectedParticipant] = useState("");
+
+  const filteredParticipants = useMemo(() => {
+    if (!assignSearchQuery.trim()) return participants;
+    const query = assignSearchQuery.toLowerCase();
+    return participants.filter((p) => p.toLowerCase().includes(query));
+  }, [participants, assignSearchQuery]);
+
+  const resetAssignState = () => {
+    setAssignSearchQuery("");
+    setSelectedParticipant("");
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) resetAssignState();
+  };
+
+  const handleAssign = () => {
+    if (!selectedParticipant) return;
+    onAssignQuestion(questionId, selectedParticipant);
+    setOpen(false);
+    resetAssignState();
+  };
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <div className={cn(qaBtnAssign, "inline-flex items-center gap-0 p-0")}>
+        <span className="px-3 leading-none">Assign</span>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={qaBtnAssignChevron}
+            aria-label="Open assign menu"
+          >
+            <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          </button>
+        </PopoverTrigger>
+      </div>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        className="w-[min(100vw-1.5rem,13.5rem)] rounded-lg p-0 shadow-md"
+      >
+        <div className="border-b border-border/60 px-2 py-1.5">
+          <p className="text-[11px] font-semibold leading-tight text-foreground">Assign Question</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">Select a participant</p>
+        </div>
+        <div className="space-y-1.5 p-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search User"
+              value={assignSearchQuery}
+              onChange={(e) => setAssignSearchQuery(e.target.value)}
+              className="h-6 rounded-md pl-7 text-[11px] placeholder:text-[10px]"
+            />
+          </div>
+          <ScrollArea className="h-[108px] pr-1">
+            <div className="space-y-0.5">
+              {filteredParticipants.map((participant) => (
+                <button
+                  key={participant}
+                  type="button"
+                  onClick={() => setSelectedParticipant(participant)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md border px-1.5 py-1 text-[11px] transition-colors",
+                    selectedParticipant === participant
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border/60 bg-card hover:bg-accent",
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <User className="h-2.5 w-2.5 shrink-0" />
+                    <span className="truncate">{participant}</span>
+                  </div>
+                  {selectedParticipant === participant ? (
+                    <Check className="h-2.5 w-2.5 shrink-0" />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+          <Button
+            onClick={handleAssign}
+            disabled={!selectedParticipant}
+            className="h-6 w-full rounded-md text-[11px] font-medium"
+          >
+            Assign
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
+
 function QueueQuestionCard({
   question,
   onSelect,
   onSkip,
-  onAssign,
+  participants,
+  onAssignQuestion,
   onCopy,
   onBlockUser,
   onDelete,
@@ -599,7 +629,8 @@ function QueueQuestionCard({
   question: Question;
   onSelect: (id: string) => void;
   onSkip: (id: string) => void;
-  onAssign: (id: string) => void;
+  participants: string[];
+  onAssignQuestion: (questionId: string, participant: string) => void;
   onCopy: (questionId: string, question: string) => void;
   onBlockUser: (username: string) => void;
   onDelete: (id: string) => void;
@@ -669,10 +700,11 @@ function QueueQuestionCard({
         <Button variant="ghost" className={qaBtnSkip} onClick={() => onSkip(question.id)}>
           Skip
         </Button>
-        <Button variant="ghost" className={qaBtnAssign} onClick={() => onAssign(question.id)}>
-          Assign
-          <ChevronDown className="shrink-0" aria-hidden />
-        </Button>
+        <AssignQuestionDropdown
+          questionId={question.id}
+          participants={participants}
+          onAssignQuestion={onAssignQuestion}
+        />
       </div>
     </div>
   );
@@ -682,7 +714,8 @@ function SelectedQuestionCard({
   question,
   onQueue,
   onSkip,
-  onAssign,
+  participants,
+  onAssignQuestion,
   onCopy,
   onBlockUser,
   onDelete,
@@ -692,7 +725,8 @@ function SelectedQuestionCard({
   question: Question;
   onQueue: (id: string) => void;
   onSkip: (id: string) => void;
-  onAssign: (id: string) => void;
+  participants: string[];
+  onAssignQuestion: (questionId: string, participant: string) => void;
   onCopy: (questionId: string, question: string) => void;
   onBlockUser: (username: string) => void;
   onDelete: (id: string) => void;
@@ -768,10 +802,11 @@ function SelectedQuestionCard({
           <Button variant="ghost" className={qaBtnSelect} onClick={() => onQueue(question.id)}>
             Queue
           </Button>
-          <Button variant="ghost" className={qaBtnAssign} onClick={() => onAssign(question.id)}>
-            Assign
-            <ChevronDown className="shrink-0" aria-hidden />
-          </Button>
+          <AssignQuestionDropdown
+            questionId={question.id}
+            participants={participants}
+            onAssignQuestion={onAssignQuestion}
+          />
         </div>
       )}
     </div>
@@ -782,7 +817,8 @@ function ClosedQuestionCard({
   question,
   onSelect,
   onQueue,
-  onAssign,
+  participants,
+  onAssignQuestion,
   onCopy,
   onBlockUser,
   onDelete,
@@ -792,7 +828,8 @@ function ClosedQuestionCard({
   question: Question;
   onSelect: (id: string) => void;
   onQueue: (id: string) => void;
-  onAssign: (id: string) => void;
+  participants: string[];
+  onAssignQuestion: (questionId: string, participant: string) => void;
   onCopy: (questionId: string, question: string) => void;
   onBlockUser: (username: string) => void;
   onDelete: (id: string) => void;
@@ -865,10 +902,11 @@ function ClosedQuestionCard({
         <Button variant="ghost" className={qaBtnSkip} onClick={() => onQueue(question.id)}>
           Queue
         </Button>
-        <Button variant="ghost" className={qaBtnAssign} onClick={() => onAssign(question.id)}>
-          Assign
-          <ChevronDown className="shrink-0" aria-hidden />
-        </Button>
+        <AssignQuestionDropdown
+          questionId={question.id}
+          participants={participants}
+          onAssignQuestion={onAssignQuestion}
+        />
       </div>
     </div>
   );

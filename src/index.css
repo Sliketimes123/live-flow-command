@@ -8,6 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    color-scheme: light;
     /* Light Theme */
     --background: 0 0% 100%;
     --foreground: 217 65% 16%;
@@ -62,6 +63,7 @@ All colors MUST be HSL.
   }
 
   .dark {
+    color-scheme: dark;
     /* Broadcast control room dark palette */
     --background: 228 43% 6%;
     --foreground: 214 24% 88%;
@@ -258,4 +260,50 @@ All colors MUST be HSL.
 .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical {
   background: hsl(var(--border));
   border-radius: 9999px;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-color: hsl(var(--border)) hsl(var(--muted) / 0.35);
+}
+
+.force-vertical-scrollbar {
+  scrollbar-color: hsl(var(--border)) hsl(var(--muted) / 0.45);
+}
+
+/* Dark mode: deeper track + softer thumb (avoids light OS default scrollbar) */
+.dark .custom-scrollbar {
+  scrollbar-color: hsl(225 14% 30%) hsl(var(--muted) / 0.65);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.65);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(225 14% 30%);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.55);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-corner {
+  background: hsl(var(--background));
+}
+
+.dark .force-vertical-scrollbar {
+  scrollbar-color: hsl(225 14% 30%) hsl(var(--muted) / 0.7);
+}
+
+.dark .force-vertical-scrollbar::-webkit-scrollbar-track:vertical {
+  background: hsl(var(--muted) / 0.7);
+}
+
+.dark .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical {
+  background: hsl(225 14% 30%);
+}
+
+.dark .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical:hover {
+  background: hsl(var(--primary) / 0.55);
 }

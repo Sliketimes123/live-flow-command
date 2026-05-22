@@ -388,7 +388,7 @@ export function StatusBar({
               className="h-8 shrink-0 rounded-md px-3 text-xs font-semibold"
               onClick={onOpenModerationPanel}
             >
-              Moderation Panel
+              Message Centre
             </Button>
             <div className="h-4 w-px bg-border" />
           </>

@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export interface LiveLog {
   id: number;
@@ -38,13 +39,14 @@ const levelLabel: Record<LiveLog["level"], string> = {
 const expandedRowGrid =
   "grid w-full grid-cols-[4.5rem_2.75rem_9rem_minmax(0,1fr)] items-center gap-x-3 px-1.5 py-1 text-[11px] leading-[1.35] tracking-[-0.1px] font-mono";
 
-const compactRowGrid =
-  "grid grid-cols-[4.25rem_2.25rem_minmax(0,1fr)] items-center gap-x-1 gap-y-0 px-1.5 py-1 text-xs leading-[1.35] tracking-[-0.1px] font-mono";
-
 const expandedSeverityClass =
   "shrink-0 justify-self-center text-center text-[10px] font-bold uppercase tabular-nums";
 
-const compactSeverityClass = "shrink-0 text-center text-[10px] font-bold uppercase tabular-nums";
+const monitoringRowSeverityClass: Record<LiveLog["level"], string> = {
+  Info: "border-l-[3px] border-l-[#3b82f6] bg-[rgba(59,130,246,0.08)]",
+  Warn: "border-l-[3px] border-l-[#f59e0b] bg-[rgba(245,158,11,0.08)]",
+  Error: "border-l-[3px] border-l-[#ef4444] bg-[rgba(239,68,68,0.08)]",
+};
 
 function compactPreviewText(log: LiveLog): string {
   if (log.previewMessage?.trim()) return log.previewMessage.trim();
@@ -90,20 +92,22 @@ function MonitoringLogRowsExpanded({ logs }: { logs: LiveLog[] }) {
 
 function MonitoringLogRowsCompact({ logs }: { logs: LiveLog[] }) {
   return (
-    <>
+    <div className="flex flex-col gap-1.5">
       {logs.map((log) => {
         const line = compactPreviewText(log);
         return (
           <div
             key={log.id}
-            className={`${compactRowGrid} rounded-md border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] dark:border-border/30 dark:hover:bg-muted/25`}
+            className={cn(
+              "flex items-center gap-3 rounded-[10px] px-3 py-2.5",
+              monitoringRowSeverityClass[log.level],
+            )}
           >
-            <span className="min-w-0 shrink-0 whitespace-nowrap font-medium text-[#64748b] dark:text-slate-400">
+            <span className="w-11 shrink-0 whitespace-nowrap text-[11px] font-medium tabular-nums text-muted-foreground">
               {log.time}
             </span>
-            <span className={`${compactSeverityClass} ${severityClass[log.level]}`}>{levelLabel[log.level]}</span>
             <span
-              className="min-w-0 truncate font-normal text-[#475569] dark:text-slate-400"
+              className="min-w-0 flex-1 truncate text-[11px] font-normal leading-snug text-foreground/90"
               title={line}
             >
               {line}
@@ -111,7 +115,7 @@ function MonitoringLogRowsCompact({ logs }: { logs: LiveLog[] }) {
           </div>
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -128,18 +132,6 @@ function ColumnHeaderRowExpanded() {
   );
 }
 
-function ColumnHeaderRowCompact() {
-  return (
-    <div
-      className={`${compactRowGrid} border-b border-border/60 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400`}
-    >
-      <span>Time</span>
-      <span className="text-center">Lvl</span>
-      <span>Message</span>
-    </div>
-  );
-}
-
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground font-mono">
@@ -150,6 +142,7 @@ function EmptyState({ message }: { message: string }) {
 
 export function LiveLogTable({
   title,
+  direction,
   logs,
   /** Expanded view: prefer `max-h-[...]` so the block grows with few rows and scrolls when full. */
   tableHeight = "max-h-[min(75vh,22rem)]",
@@ -173,7 +166,6 @@ export function LiveLogTable({
           <EmptyState message={emptyMessage} />
         ) : (
           <div className={scrollBoxClass}>
-            <ColumnHeaderRowCompact />
             <MonitoringLogRowsCompact logs={logs} />
           </div>
         )}

@@ -121,6 +121,10 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  #root {
+    min-height: 100vh;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     background-image: radial-gradient(circle at 10% 10%, hsl(var(--primary) / 0.04), transparent 42%),
@@ -306,4 +310,50 @@ All colors MUST be HSL.
 
 .dark .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical:hover {
   background: hsl(var(--primary) / 0.55);
+}
+
+/* Right sidebar chat: always-visible scrollbar when list overflows */
+.sidebar-chat-scrollbar {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.5) rgba(100, 116, 139, 0.14);
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(100, 116, 139, 0.14);
+  border-radius: 999px;
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.65);
+  background-clip: padding-box;
+}
+
+.dark .sidebar-chat-scrollbar {
+  scrollbar-color: rgba(148, 163, 184, 0.55) rgba(148, 163, 184, 0.16);
+}
+
+.dark .sidebar-chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.dark .sidebar-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  background-clip: padding-box;
+}
+
+.dark .sidebar-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.72);
+  background-clip: padding-box;
 }

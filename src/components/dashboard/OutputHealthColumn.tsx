@@ -1,8 +1,7 @@
 import { Play } from "lucide-react";
 import { LiveLogTable } from "./LiveLogTable";
-import { LogPreviewDialog } from "./LogPreviewDialog";
+import { StreamDirectionLabel } from "./StreamDirectionLabel";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import outputStreamIcon from "@/assets/output-stream-icon.png";
 
 interface OutputHealthColumnProps {
   publishingHealth: "stable" | "warning" | "poor";
@@ -37,7 +36,7 @@ export function OutputHealthColumn({
   const outputLogs = [
     {
       id: 1,
-      time: "03:14 PM",
+      time: "15:14",
       level: "Info" as const,
       source: "Manifest",
       message: "Request 200",
@@ -45,7 +44,7 @@ export function OutputHealthColumn({
     },
     {
       id: 2,
-      time: "03:15 PM",
+      time: "15:15",
       level: "Warn" as const,
       source: "Segment",
       message: "Latency elevated",
@@ -53,7 +52,7 @@ export function OutputHealthColumn({
     },
     {
       id: 3,
-      time: "03:15 PM",
+      time: "15:15",
       level: "Error" as const,
       source: "Reconnect",
       message: "22 dropped frames",
@@ -61,7 +60,7 @@ export function OutputHealthColumn({
     },
     {
       id: 4,
-      time: "03:16 PM",
+      time: "15:16",
       level: "Error" as const,
       source: "Health",
       message: "Stream health degraded",
@@ -79,29 +78,22 @@ export function OutputHealthColumn({
   return (
     <div className="h-full min-h-0 rounded-2xl border border-border/70 bg-card p-4">
       <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
-        {/* Header: icon + metadata on one row; Healthy on the right */}
-        <div className="flex w-full min-w-0 shrink-0 items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-            <img
-              src={outputStreamIcon}
-              alt=""
-              aria-label="Output stream"
-              title="Output stream"
-              className="h-[18px] w-[18px] shrink-0 object-contain opacity-90 dark:brightness-0 dark:invert dark:opacity-95"
-            />
-            <p
-              className="min-w-0 truncate text-xs font-medium leading-snug text-slate-700 dark:text-slate-200"
-              title={outputMetadataLine}
-            >
-              {outputMetadataLine}
-            </p>
-          </div>
-          <HoverCard openDelay={150} closeDelay={100}>
-            <HoverCardTrigger asChild>
-              <button type="button" className={`${statusBadgeClass} shrink-0 cursor-default ${statusClass}`}>
-                {statusLabel}
-              </button>
-            </HoverCardTrigger>
+        {/* Header: icon left; metadata centered; Healthy on the right */}
+        <div className="grid w-full min-w-0 shrink-0 grid-cols-[auto_1fr_auto] items-center gap-3">
+          <StreamDirectionLabel direction="out" className="justify-self-start" />
+          <p
+            className="min-w-0 truncate whitespace-nowrap text-center text-[13px] font-semibold leading-snug text-muted-foreground"
+            title={outputMetadataLine}
+          >
+            {outputMetadataLine}
+          </p>
+          <div className="justify-self-end">
+            <HoverCard openDelay={150} closeDelay={100}>
+              <HoverCardTrigger asChild>
+                <button type="button" className={`${statusBadgeClass} shrink-0 cursor-default ${statusClass}`}>
+                  {statusLabel}
+                </button>
+              </HoverCardTrigger>
             <HoverCardContent side="bottom" align="end" className="w-72 p-3">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Publishing destination health
@@ -133,7 +125,8 @@ export function OutputHealthColumn({
                 <p className="text-[11px] text-muted-foreground">No published destinations.</p>
               )}
             </HoverCardContent>
-          </HoverCard>
+            </HoverCard>
+          </div>
         </div>
 
         {/* Player — 16:9 scales with column width */}
@@ -145,19 +138,6 @@ export function OutputHealthColumn({
 
         {/* Logs section */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold tracking-[0.5px] text-slate-700 dark:text-slate-300">
-              Logs · {outputLogs.length} events
-            </span>
-            <LogPreviewDialog
-              title="Logs"
-              description="Output stream — expanded log view."
-              logs={outputLogs}
-              emptyMessage="No output logs available"
-              iconOnly
-              triggerClassName="bg-background/90"
-            />
-          </div>
           <LiveLogTable
             logs={outputLogs}
             emptyMessage="No output logs available"

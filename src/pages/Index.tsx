@@ -459,17 +459,6 @@ const Index = () => {
     return () => window.removeEventListener("resize", initializePanelWidths);
   }, []);
 
-  /** Default collapsed on narrow viewports to give main columns more room */
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1100px)");
-    const apply = () => {
-      if (mq.matches) setIsRightContentCollapsed(true);
-    };
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
-
   useEffect(() => {
     if (!resizingSide) return;
 

@@ -1,4 +1,4 @@
-import { Activity, Cpu, Ban, Star, Trash2, Search, MessageSquare, Radio, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Cpu, Ban, Star, Trash2, Search, MessageSquare, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -118,17 +118,26 @@ export function StatusBar({
   const [hasSelectedChatActions, setHasSelectedChatActions] = useState(false);
   const { toast } = useToast();
 
-  const healthColor = {
-    stable: "text-success bg-success/10 border-success/20",
-    warning: "text-warning bg-warning/10 border-warning/20",
-    poor: "text-destructive bg-destructive/10 border-destructive/20",
-  };
+  type StreamHealthState = "stable" | "warning" | "poor";
 
-  const healthText = {
+  const streamHealthStatusLabel: Record<StreamHealthState, string> = {
     stable: "Stable",
     warning: "Warning",
-    poor: "Poor",
+    poor: "Unstable",
   };
+
+  const streamHealthDotClass: Record<StreamHealthState, string> = {
+    stable: "bg-[#4ade80]",
+    warning: "bg-[#facc15]",
+    poor: "bg-[#ef4444]",
+  };
+
+  const StreamHealthDot = ({ health }: { health: StreamHealthState }) => (
+    <span
+      className={cn("h-3 w-3 shrink-0 rounded-full", streamHealthDotClass[health])}
+      aria-label={streamHealthStatusLabel[health]}
+    />
+  );
 
   const isUserBlocked = (username: string) => {
     return blockedUsers.some((user) => user.username === username);
@@ -197,15 +206,14 @@ export function StatusBar({
         <TooltipProvider delayDuration={300}>
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 cursor-default opacity-70">
-                <Radio className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${healthColor[inputData.streamHealth]}`}>
-                  {healthText[inputData.streamHealth]}
-                </span>
+              <div className="inline-flex cursor-default items-center gap-1.5">
+                <ArrowDownToLine className="h-3.5 w-3.5 shrink-0 text-[#3b82f6]" aria-hidden />
+                <span className="text-xs font-semibold text-[#3b82f6]">IN</span>
+                <StreamHealthDot health={inputData.streamHealth} />
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Input Stream Health</p>
+              <p>Input Stream Health — {streamHealthStatusLabel[inputData.streamHealth]}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -216,15 +224,14 @@ export function StatusBar({
         <TooltipProvider delayDuration={300}>
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 cursor-default opacity-70">
-                <Activity className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${healthColor[outputData.streamHealth]}`}>
-                  {healthText[outputData.streamHealth]}
-                </span>
+              <div className="inline-flex cursor-default items-center gap-1.5">
+                <ArrowUpFromLine className="h-3.5 w-3.5 shrink-0 text-[#22c55e]" aria-hidden />
+                <span className="text-xs font-semibold text-[#22c55e]">OUT</span>
+                <StreamHealthDot health={outputData.streamHealth} />
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Output Stream Health</p>
+              <p>Output Stream Health — {streamHealthStatusLabel[outputData.streamHealth]}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

@@ -36,11 +36,17 @@ import {
   List,
   MoreVertical,
   Megaphone,
-  ChevronsDown,
   ChevronDown,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type RefObject } from "react";
-import { useToast } from "@/hooks/use-toast";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FocusEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { AutoScrollIcon } from "@/components/icons/AutoScrollIcon";
 import { cn } from "@/lib/utils";
 import type { BlockedUser, ChatMessage } from "./ChatModeration";
 
@@ -52,105 +58,9 @@ export type ChatChannel = "comments" | "studio";
 /** `moderation` = full panel two-column; `sidebar` = narrow stacked accordion. */
 export type ChatPanelVariant = "moderation" | "sidebar";
 
-const MESSAGE_DRAG_SOURCE_MIME = "application/x-moderation-message-source";
-const MESSAGE_DRAG_PAYLOAD_MIME = "application/x-moderation-chat-message";
-
 /** Avoid focus ring clipping inside overflow-hidden moderation panels */
 const panelInputClass =
   "h-[38px] border-border/50 bg-muted/25 text-xs shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0";
-
-type MessageDragSource = "visible" | "hidden";
-type ManagementDropZone = "selected" | "blocked" | "hidden";
-type DragOverTarget = ManagementDropZone | "visible";
-
-export interface ChatMessageDragPayload {
-  type: "chat-message";
-  messageId: string;
-  userId: string;
-  username: string;
-  message: string;
-  timestamp: string;
-  isHidden: boolean;
-  isSelected: boolean;
-  isBlocked: boolean;
-  source: MessageDragSource;
-}
-
-function buildDragPayload(
-  msg: ChatMessage,
-  source: MessageDragSource,
-  isBlocked: boolean,
-): ChatMessageDragPayload {
-  return {
-    type: "chat-message",
-    messageId: msg.id,
-    userId: msg.username,
-    username: msg.username,
-    message: msg.message,
-    timestamp: msg.timestamp,
-    isHidden: !!msg.isHidden,
-    isSelected: !!msg.isSelected,
-    isBlocked,
-    source,
-  };
-}
-
-function setMessageDragData(event: DragEvent, payload: ChatMessageDragPayload) {
-  event.dataTransfer.setData("text/plain", payload.messageId);
-  event.dataTransfer.setData(MESSAGE_DRAG_SOURCE_MIME, payload.source);
-  event.dataTransfer.setData(MESSAGE_DRAG_PAYLOAD_MIME, JSON.stringify(payload));
-  event.dataTransfer.effectAllowed = "move";
-}
-
-function readMessageDragPayload(event: DragEvent): ChatMessageDragPayload | null {
-  const json = event.dataTransfer.getData(MESSAGE_DRAG_PAYLOAD_MIME);
-  if (json) {
-    try {
-      const parsed = JSON.parse(json) as ChatMessageDragPayload;
-      if (parsed?.type === "chat-message" && parsed.messageId) {
-        return parsed;
-      }
-    } catch {
-      /* fall through to legacy */
-    }
-  }
-
-  const messageId = event.dataTransfer.getData("text/plain");
-  const source = event.dataTransfer.getData(MESSAGE_DRAG_SOURCE_MIME) as MessageDragSource;
-  if (!messageId || (source !== "visible" && source !== "hidden")) {
-    return null;
-  }
-
-  return {
-    type: "chat-message",
-    messageId,
-    userId: "",
-    username: "",
-    message: "",
-    timestamp: "",
-    isHidden: source === "hidden",
-    isSelected: false,
-    isBlocked: false,
-    source,
-  };
-}
-
-function managementDropHighlightClass(zone: ManagementDropZone, active: boolean) {
-  if (!active) return "";
-  switch (zone) {
-    case "selected":
-      return "ring-2 ring-blue-500/40 bg-blue-500/[0.07]";
-    case "blocked":
-      return "ring-2 ring-amber-500/40 bg-amber-500/[0.07]";
-    case "hidden":
-      return "ring-2 ring-primary/45 bg-primary/[0.06]";
-  }
-}
-
-function isDragLeavingZone(event: DragEvent<HTMLElement>) {
-  const related = event.relatedTarget as Node | null;
-  return related !== null && event.currentTarget.contains(related);
-}
 
 function chatUserInitials(username: string): string {
   const t = username.trim();
@@ -185,16 +95,20 @@ export interface ModerationMessagePanelProps {
   onUnblockUser?: (username: string) => void;
   autoScroll: boolean;
   onAutoScrollChange: (value: boolean) => void;
+  /** Pauses parent auto-scroll while a row or action menu is active. */
+  onAutoScrollPauseChange?: (paused: boolean) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
   requestScrollToBottom: () => void;
   copiedMessageId: string | null;
-  isUserBlocked: (username: string) => boolean;
+  /** Not used for studio chat — block/unblock is public-chat only. */
+  isUserBlocked?: (username: string) => boolean;
   onToggleHide: (messageId: string) => void;
   onTogglePin: (messageId: string) => void;
   onToggleSelect: (messageId: string) => void;
   onCopyMessage: (messageId: string, text: string) => void;
   onDeleteMessage?: (messageId: string) => void;
-  onBlockRequest: (username: string) => void;
+  /** Not used for studio chat — block/unblock is public-chat only. */
+  onBlockRequest?: (username: string) => void;
   composerPlaceholder: string;
   composerValue: string;
   onComposerChange: (value: string) => void;
@@ -244,38 +158,25 @@ type ManagementMenuItem = {
   separatorBefore?: boolean;
 };
 
+const managementQuickActionBtnClass =
+  "inline-flex h-8 w-8 min-h-8 min-w-8 shrink-0 items-center justify-center rounded-[8px] p-0 text-muted-foreground transition-colors hover:bg-primary/[0.08] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-1 active:bg-primary/15";
+
 function ManagementMessageCard({
   msg,
   blocked,
-  copiedMessageId,
   menuAriaLabel,
   menuItems,
-  draggable,
-  isDragging,
-  onDragStart,
-  onDragEnd,
+  quickActions,
 }: {
   msg: ChatMessage;
   blocked: boolean;
   copiedMessageId: string | null;
   menuAriaLabel: string;
   menuItems: ManagementMenuItem[];
-  draggable?: boolean;
-  isDragging?: boolean;
-  onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
-  onDragEnd?: () => void;
+  quickActions?: ReactNode;
 }) {
   return (
-    <div
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      className={cn(
-        managementItemCardClass,
-        draggable && "cursor-grab active:cursor-grabbing",
-        isDragging && "opacity-45 ring-1 ring-primary/30",
-      )}
-    >
+    <div className={cn(managementItemCardClass, "group")}>
       <div className="flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
@@ -292,7 +193,15 @@ function ManagementMessageCard({
           </div>
           <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-foreground/85">{msg.message}</p>
         </div>
-        <DropdownMenu>
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1 opacity-0 transition-opacity",
+            "group-hover:opacity-100 group-focus-within:opacity-100",
+            "has-[:focus-visible]:opacity-100 has-[[data-state=open]]:opacity-100",
+          )}
+        >
+          {quickActions}
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
@@ -319,6 +228,7 @@ function ManagementMessageCard({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </div>
   );
@@ -328,15 +238,13 @@ function BlockedUserCard({
   user,
   messageCount,
   onUnblock,
-  onCopyUsername,
 }: {
   user: BlockedUser;
   messageCount: number;
   onUnblock: () => void;
-  onCopyUsername: () => void;
 }) {
   return (
-    <div className="rounded-[10px] border border-border/50 bg-muted/25 px-3 py-2.5 shadow-sm">
+    <div className="group rounded-[10px] border border-border/50 bg-muted/25 px-3 py-2.5 shadow-sm">
       <div className="flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[11px] font-semibold text-foreground">{user.username}</p>
@@ -347,73 +255,62 @@ function BlockedUserCard({
             </p>
           ) : null}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              aria-label="Blocked user actions"
-            >
-              <MoreVertical className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem className="text-xs" onClick={onUnblock}>
-              <Eye className="mr-2 h-3.5 w-3.5" />
-              Unblock
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs" onClick={onCopyUsername}>
-              <Copy className="mr-2 h-3.5 w-3.5" />
-              Copy username
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div
+          className={cn(
+            "shrink-0 opacity-0 transition-opacity",
+            "group-hover:opacity-100 group-focus-within:opacity-100 has-[:focus-visible]:opacity-100",
+          )}
+        >
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    managementQuickActionBtnClass,
+                    "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                  )}
+                  aria-label="Unblock user"
+                  onClick={onUnblock}
+                >
+                  <Ban className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">Unblock</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
   );
 }
 
-type ManagementSectionDropHandlers = {
-  onDragOver: (event: DragEvent<HTMLElement>) => void;
-  onDragLeave: (event: DragEvent<HTMLElement>) => void;
-  onDrop: (event: DragEvent<HTMLElement>) => void;
-};
-
 function ManagementAccordionSection({
   title,
   count,
   helperText,
-  dragOverHint,
   open,
   onOpenChange,
   maxHeightClass,
-  dropZone,
-  dropHandlers,
-  dropHighlight,
   children,
 }: {
   title: string;
   count: number;
   helperText?: string;
-  dragOverHint?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   maxHeightClass: string;
-  dropZone: ManagementDropZone;
-  dropHandlers?: ManagementSectionDropHandlers;
-  dropHighlight?: boolean;
   children: ReactNode;
 }) {
-  const hintText = dropHighlight && dragOverHint ? dragOverHint : open ? helperText : undefined;
+  const hintText = open ? helperText : undefined;
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="border-b border-border/40 last:border-b-0">
-      <div
-        {...dropHandlers}
-        className={cn("transition-shadow", managementDropHighlightClass(dropZone, !!dropHighlight))}
-      >
+      <div>
         <CollapsibleTrigger asChild>
           <button
             type="button"
@@ -426,14 +323,7 @@ function ManagementAccordionSection({
                 <span className={accordionCountBadgeClass}>{count}</span>
               </div>
               {hintText ? (
-                <p
-                  className={cn(
-                    "mt-0.5 text-[10px] text-muted-foreground/90",
-                    dropHighlight && dragOverHint && "font-medium text-foreground/80",
-                  )}
-                >
-                  {hintText}
-                </p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground/90">{hintText}</p>
               ) : null}
             </div>
             <ChevronDown
@@ -473,16 +363,17 @@ export function ModerationMessagePanel({
   onUnblockUser,
   autoScroll,
   onAutoScrollChange,
+  onAutoScrollPauseChange,
   scrollRef,
   requestScrollToBottom,
   copiedMessageId,
-  isUserBlocked,
+  isUserBlocked = () => false,
   onToggleHide,
   onTogglePin,
   onToggleSelect,
   onCopyMessage,
   onDeleteMessage,
-  onBlockRequest,
+  onBlockRequest = () => undefined,
   composerPlaceholder,
   composerValue,
   onComposerChange,
@@ -491,23 +382,22 @@ export function ModerationMessagePanel({
 }: ModerationMessagePanelProps) {
   const isModerationVariant = variant === "moderation";
   const isSidebarVariant = variant === "sidebar";
+  /** Sidebar width is too narrow for card/grid layouts — always use compact rows. */
+  const effectiveLayout: ModerationChatLayout = isSidebarVariant ? "row" : layout;
   const isStudioChat = chatChannel === "studio";
-  const hasManagementData = hiddenMessages !== undefined;
+  const isUserBlockedForChannel = (username: string) =>
+    !isStudioChat && isUserBlocked(username);
+  const hasManagementData = hiddenMessages !== undefined && !isStudioChat;
   const showManagementColumn = hasManagementData && isModerationVariant;
   const hiddenList = hiddenMessages ?? [];
   const selectedList = selectedMessages ?? [];
   const blockedList = blockedUsers ?? [];
   const messagePool = allMessages ?? messages;
-  const { toast } = useToast();
-  const dragDropEnabled = showManagementColumn;
-  const sidebarInputClass = cn(
-    panelInputClass,
-    isSidebarVariant && "h-9 rounded-[10px] text-sm",
-  );
+  const sidebarSearchInputClass = cn(panelInputClass, "h-9 rounded-[10px] text-sm leading-none");
+  const sidebarComposerInputClass = cn(panelInputClass, "h-10 rounded-[10px] text-sm leading-none");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [draggingPayload, setDraggingPayload] = useState<ChatMessageDragPayload | null>(null);
-  const [dragOverTarget, setDragOverTarget] = useState<DragOverTarget | null>(null);
-  const expandTimersRef = useRef<Partial<Record<ManagementDropZone, ReturnType<typeof setTimeout>>>>({});
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
   const [accordionSections, setAccordionSections] = useState({
     selected: true,
     blocked: false,
@@ -518,14 +408,6 @@ export function ModerationMessagePanel({
     setAccordionSections((prev) => ({ ...prev, [section]: open }));
   };
 
-  const messageById = useMemo(() => {
-    const map = new Map<string, ChatMessage>();
-    for (const msg of messagePool) {
-      map.set(msg.id, msg);
-    }
-    return map;
-  }, [messagePool]);
-
   const blockedUserMessageCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const msg of messagePool) {
@@ -534,215 +416,133 @@ export function ModerationMessagePanel({
     return counts;
   }, [messagePool]);
 
-  const clearExpandTimer = (zone: ManagementDropZone) => {
-    const timer = expandTimersRef.current[zone];
-    if (timer) {
-      clearTimeout(timer);
-    }
-    delete expandTimersRef.current[zone];
-  };
+  useEffect(() => {
+    onAutoScrollPauseChange?.(hoveredMessageId !== null || openActionsMenuId !== null);
+  }, [hoveredMessageId, openActionsMenuId, onAutoScrollPauseChange]);
 
-  const scheduleSectionExpand = (zone: ManagementDropZone) => {
-    if (accordionSections[zone]) return;
-    clearExpandTimer(zone);
-    expandTimersRef.current[zone] = setTimeout(() => {
-      setAccordionOpen(zone, true);
-      delete expandTimersRef.current[zone];
-    }, 400);
-  };
-
-  const clearAllExpandTimers = () => {
-    for (const zone of ["selected", "blocked", "hidden"] as const) {
-      clearExpandTimer(zone);
-    }
-  };
-
-  const resolvePayloadMessage = (payload: ChatMessageDragPayload) =>
-    messageById.get(payload.messageId) ??
-    ({
-      id: payload.messageId,
-      username: payload.username,
-      message: payload.message,
-      timestamp: payload.timestamp,
-      isHidden: payload.isHidden,
-      isSelected: payload.isSelected,
-    } satisfies ChatMessage);
-
-  const handleDropToSelected = (payload: ChatMessageDragPayload) => {
-    if (payload.source !== "visible") return;
-
-    const msg = resolvePayloadMessage(payload);
-    if (msg.isSelected) {
-      toast({ title: "Already selected", description: "Message already selected" });
-      return;
-    }
-
-    onToggleSelect(payload.messageId);
-    setAccordionOpen("selected", true);
-  };
-
-  const handleDropToBlocked = (payload: ChatMessageDragPayload) => {
-    if (payload.source !== "visible") return;
-
-    const username = payload.username || resolvePayloadMessage(payload).username;
-    if (!username) return;
-
-    if (isUserBlocked(username) || payload.isBlocked) {
-      toast({ title: "Already blocked", description: "User already blocked" });
-      return;
-    }
-
-    onBlockRequest(username);
-    setAccordionOpen("blocked", true);
-  };
-
-  const handleDropToHidden = (payload: ChatMessageDragPayload) => {
-    if (payload.source === "visible") {
-      const msg = resolvePayloadMessage(payload);
-      if (msg.isHidden) {
-        return;
-      }
-      onToggleHide(payload.messageId);
-      setAccordionOpen("hidden", true);
-      return;
-    }
-
-    if (payload.source === "hidden") {
-      onToggleHide(payload.messageId);
-    }
-  };
-
-  const handleMessageDragStart = (
-    event: DragEvent<HTMLDivElement>,
-    msg: ChatMessage,
-    source: MessageDragSource,
-  ) => {
-    if (!dragDropEnabled) {
-      event.preventDefault();
-      return;
-    }
-    const payload = buildDragPayload(msg, source, isUserBlocked(msg.username));
-    setMessageDragData(event, payload);
-    setDraggingPayload(payload);
-  };
-
-  const handleMessageDragEnd = () => {
-    setDraggingPayload(null);
-    setDragOverTarget(null);
-    clearAllExpandTimers();
-  };
-
-  const handleDragOverZone = (event: DragEvent<HTMLElement>, zone: DragOverTarget) => {
-    if (!dragDropEnabled || !draggingPayload) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDragOverTarget(zone);
-    if (zone === "selected" || zone === "blocked" || zone === "hidden") {
-      scheduleSectionExpand(zone);
-    }
-  };
-
-  const handleDragLeaveZone = (event: DragEvent<HTMLElement>, zone?: DragOverTarget) => {
-    if (isDragLeavingZone(event)) return;
-    if (zone === "selected" || zone === "blocked" || zone === "hidden") {
-      clearExpandTimer(zone);
-    }
-    setDragOverTarget(null);
-  };
-
-  const createManagementDropHandlers = (zone: ManagementDropZone): ManagementSectionDropHandlers => ({
-    onDragOver: (event) => handleDragOverZone(event, zone),
-    onDragLeave: (event) => handleDragLeaveZone(event, zone),
-    onDrop: (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      clearExpandTimer(zone);
-      setDragOverTarget(null);
-      setDraggingPayload(null);
-      if (!dragDropEnabled) return;
-
-      const payload = readMessageDragPayload(event);
-      if (!payload) return;
-
-      if (zone === "selected") {
-        handleDropToSelected(payload);
-      } else if (zone === "blocked") {
-        handleDropToBlocked(payload);
-      } else {
-        handleDropToHidden(payload);
+  const messageInteractionHandlers = (messageId: string) => ({
+    onMouseEnter: () => setHoveredMessageId(messageId),
+    onMouseLeave: () => setHoveredMessageId((current) => (current === messageId ? null : current)),
+    onFocusCapture: () => setHoveredMessageId(messageId),
+    onBlurCapture: (event: FocusEvent<HTMLElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        setHoveredMessageId((current) => (current === messageId ? null : current));
       }
     },
   });
 
-  const handleDropOnVisibleZone = (event: DragEvent<HTMLElement>) => {
-    event.preventDefault();
-    setDragOverTarget(null);
-    setDraggingPayload(null);
-    clearAllExpandTimers();
-    if (!dragDropEnabled) return;
-
-    const payload = readMessageDragPayload(event);
-    if (!payload || payload.source !== "hidden") return;
-
-    onToggleHide(payload.messageId);
-  };
-
-  const dropZoneHighlightClass = (zone: DragOverTarget) =>
-    dragOverTarget === zone && "ring-2 ring-primary/45 bg-primary/[0.06]";
-
-  const isDragging = draggingPayload !== null;
-
-  useEffect(() => {
-    return () => {
-      for (const zone of ["selected", "blocked", "hidden"] as const) {
-        const timer = expandTimersRef.current[zone];
-        if (timer) clearTimeout(timer);
-      }
-    };
-  }, []);
-
   const messageMetaLine = (msg: ChatMessage, blocked: boolean) => (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-      {!isStudioChat && msg.isSelected && <Star className="h-3 w-3 shrink-0 fill-primary text-primary" />}
-      <span className="min-w-0 truncate text-[12px] font-semibold leading-tight text-foreground">
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-x-1.5",
+        isSidebarVariant ? "gap-y-0 leading-[1.2]" : "gap-y-0.5",
+      )}
+    >
+      {!isStudioChat && msg.isSelected && (
+        <Star
+          className={cn(
+            "shrink-0 fill-primary text-primary",
+            isSidebarVariant ? "h-2.5 w-2.5" : "h-3 w-3",
+          )}
+        />
+      )}
+      <span
+        className={cn(
+          "min-w-0 truncate text-foreground",
+          isSidebarVariant ? "text-[13px] font-bold leading-tight" : "text-[12px] font-semibold leading-tight",
+        )}
+      >
         {msg.username}
       </span>
-      <span className="shrink-0 font-mono text-[10px] leading-none text-muted-foreground">{msg.timestamp}</span>
-      {msg.isHighlighted && <Star className="h-3 w-3 shrink-0 fill-primary text-primary" />}
-      {blocked && (
-        <span className="rounded border border-destructive/25 bg-destructive/10 px-1 py-px text-[9px] font-bold uppercase leading-none text-destructive">
+      <span
+        className={cn(
+          "shrink-0 leading-none text-muted-foreground",
+          isSidebarVariant ? "text-[11px] font-medium" : "font-mono text-[10px]",
+        )}
+      >
+        {msg.timestamp}
+      </span>
+      {msg.isHighlighted && (
+        <Star className={cn("shrink-0 fill-primary text-primary", isSidebarVariant ? "h-2.5 w-2.5" : "h-3 w-3")} />
+      )}
+      {!isStudioChat && blocked && (
+        <span
+          className={cn(
+            "inline-flex items-center rounded border border-destructive/25 bg-destructive/10 font-bold uppercase text-destructive",
+            isSidebarVariant
+              ? "h-[18px] rounded-md px-1.5 text-[10px] leading-none"
+              : "px-1 py-px text-[9px] leading-none",
+          )}
+        >
           Blocked
         </span>
       )}
     </div>
   );
 
-  const messageBody = (msg: ChatMessage) => (
-    <p className="mt-0.5 text-[12px] leading-snug text-foreground/90 break-words">{msg.message}</p>
+  const messageBody = (msg: ChatMessage, bodyVariant: "row" | "card" = "row") => (
+    <p
+      className={cn(
+        "block text-foreground/90",
+        bodyVariant === "card"
+          ? "mt-2 line-clamp-3 break-words text-[12px] leading-snug"
+          : isSidebarVariant
+            ? "m-0 mb-0 line-clamp-2 break-words text-[12px] leading-[1.35] text-foreground"
+            : "mt-0.5 break-words text-[12px] leading-snug",
+      )}
+    >
+      {msg.message}
+    </p>
   );
 
   const avatarEl = (username: string) => (
     <div
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 bg-primary/10 text-[10px] font-semibold uppercase leading-none text-primary"
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-primary/10 font-semibold uppercase leading-none text-primary",
+        isSidebarVariant ? "h-[34px] w-[34px] text-[13px]" : "h-7 w-7 text-[10px]",
+      )}
       aria-hidden
     >
       {chatUserInitials(username)}
     </div>
   );
 
-  const messageActionIconClass = "h-3 w-3 shrink-0";
+  type MessageActionSize = "row" | "card" | "sidebar";
 
-  const messageActionBtnClass =
-    "h-6 w-6 shrink-0 p-0 text-muted-foreground hover:bg-muted/60 hover:text-foreground [&_svg]:!size-3";
+  const messageActionBaseBtnClass =
+    "inline-flex shrink-0 items-center justify-center rounded-[10px] p-0 text-muted-foreground transition-colors hover:bg-primary/[0.08] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-1 active:bg-primary/15";
 
-  const messageActionsVisibilityClass = (placement: "inline" | "cardCorner") =>
-    cn(
-      placement === "inline" &&
-        "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-state=open]]:opacity-100",
-      placement === "cardCorner" && "opacity-80 hover:opacity-100",
-    );
+  const messageActionStyles = (size: MessageActionSize) => {
+    if (size === "sidebar") {
+      return {
+        btn: cn(messageActionBaseBtnClass, "h-7 w-7 min-w-7 rounded-[7px]"),
+        icon: "h-[15px] w-[15px] shrink-0",
+        cluster: "flex items-center justify-end gap-1.5",
+      };
+    }
+    if (size === "card") {
+      return {
+        btn: cn(messageActionBaseBtnClass, "h-9 w-9 min-h-9 min-w-9"),
+        icon: "h-[18px] w-[18px] shrink-0",
+        cluster: "flex items-center justify-end gap-3",
+      };
+    }
+    return {
+      btn: cn(
+        messageActionBaseBtnClass,
+        isModerationVariant ? "h-10 w-10 min-h-10 min-w-10" : "h-9 w-9 min-h-9 min-w-9",
+      ),
+      icon: isModerationVariant ? "h-5 w-5 shrink-0" : "h-[18px] w-[18px] shrink-0",
+      cluster: "flex shrink-0 items-center gap-3 pr-3",
+    };
+  };
 
-  const messagePinAction = (msg: ChatMessage) => (
+  const messageActionsHoverClass =
+    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-state=open]]:opacity-100";
+
+  const messagePinAction = (msg: ChatMessage, size: MessageActionSize = "row") => {
+    const { btn, icon } = messageActionStyles(size);
+    return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
@@ -750,7 +550,7 @@ export function ModerationMessagePanel({
           variant="ghost"
           size="icon"
           className={cn(
-            messageActionBtnClass,
+            btn,
             msg.isPinned &&
               "bg-orange-600/15 text-orange-600 opacity-100 hover:bg-orange-600/20 hover:text-orange-600 dark:bg-orange-500/15 dark:text-orange-400 dark:hover:bg-orange-500/20 dark:hover:text-orange-300",
           )}
@@ -758,107 +558,165 @@ export function ModerationMessagePanel({
           aria-pressed={msg.isPinned}
           onClick={() => onTogglePin(msg.id)}
         >
-          {msg.isPinned ? (
-            <PinOff className={messageActionIconClass} />
-          ) : (
-            <Pin className={messageActionIconClass} />
-          )}
+          {msg.isPinned ? <PinOff className={icon} /> : <Pin className={icon} />}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">
         <p className="text-xs">{msg.isPinned ? "Unpin" : "Pin"}</p>
       </TooltipContent>
     </Tooltip>
-  );
+    );
+  };
 
-  const messageQuickActions = (msg: ChatMessage, blocked: boolean, includePin = true) => (
-    <>
-      {!isStudioChat ? (
-        <>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={cn(messageActionBtnClass, msg.isHidden && "text-primary")}
-                aria-label={msg.isHidden ? "Unhide message" : "Hide message"}
-                onClick={() => onToggleHide(msg.id)}
-              >
-                {msg.isHidden ? (
-                  <Eye className={messageActionIconClass} />
-                ) : (
-                  <EyeOff className={messageActionIconClass} />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p className="text-xs">{msg.isHidden ? "Unhide" : "Hide"}</p>
-            </TooltipContent>
-          </Tooltip>
-          {includePin ? messagePinAction(msg) : null}
-        </>
-      ) : null}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              messageActionBtnClass,
-              blocked && "text-destructive hover:bg-destructive/10 hover:text-destructive",
-            )}
-            aria-label={blocked ? "Unblock user" : "Block user"}
-            onClick={() => {
-              if (blocked) {
-                onUnblockUser?.(msg.username);
-              } else {
-                onBlockRequest(msg.username);
-              }
-            }}
-          >
-            <Ban className={messageActionIconClass} />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p className="text-xs">{blocked ? "Unblock user" : "Block user"}</p>
-        </TooltipContent>
-      </Tooltip>
-    </>
-  );
-
-  const messageOverflowMenu = (msg: ChatMessage, placement: "inline" | "cardCorner") => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+  const messageHideAction = (msg: ChatMessage, size: MessageActionSize = "row") => {
+    const { btn, icon } = messageActionStyles(size);
+    return (
+    <Tooltip>
+      <TooltipTrigger asChild>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className={cn(messageActionBtnClass, "data-[state=open]:opacity-100")}
-          aria-label="More message actions"
+          className={cn(btn, msg.isHidden && "text-primary")}
+          aria-label={msg.isHidden ? "Unhide message" : "Hide message"}
+          onClick={() => onToggleHide(msg.id)}
         >
-          <MoreVertical className={messageActionIconClass} />
+          {msg.isHidden ? <Eye className={icon} /> : <EyeOff className={icon} />}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        {!isStudioChat ? (
-          <DropdownMenuItem className="text-xs" onClick={() => onToggleSelect(msg.id)}>
-            <Star className={cn("mr-2 h-3.5 w-3.5", msg.isSelected && "fill-primary text-primary")} />
-            {msg.isSelected ? "Unselect" : "Select"}
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem className="text-xs" onClick={() => onCopyMessage(msg.id, msg.message)}>
-          {copiedMessageId === msg.id ? (
-            <Check className="mr-2 h-3.5 w-3.5 text-primary" />
-          ) : (
-            <Copy className="mr-2 h-3.5 w-3.5" />
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p className="text-xs">{msg.isHidden ? "Unhide" : "Hide"}</p>
+      </TooltipContent>
+    </Tooltip>
+    );
+  };
+
+  const messageSelectAction = (msg: ChatMessage, size: MessageActionSize = "row") => {
+    const { btn, icon } = messageActionStyles(size);
+    return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn(btn, msg.isSelected && "text-primary")}
+          aria-label={msg.isSelected ? "Unselect message" : "Select message"}
+          aria-pressed={msg.isSelected}
+          onClick={() => onToggleSelect(msg.id)}
+        >
+          <Star className={cn(icon, msg.isSelected && "fill-primary")} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p className="text-xs">{msg.isSelected ? "Unselect" : "Select"}</p>
+      </TooltipContent>
+    </Tooltip>
+    );
+  };
+
+  const messageBlockAction = (msg: ChatMessage, blocked: boolean, size: MessageActionSize = "row") => {
+    const { btn, icon } = messageActionStyles(size);
+    return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn(
+            btn,
+            blocked && "text-destructive hover:bg-destructive/10 hover:text-destructive",
+            size === "sidebar" && !blocked && "hover:bg-destructive/10 hover:text-destructive",
           )}
-          Copy
-        </DropdownMenuItem>
-        {onDeleteMessage ? (
-          <>
-            <DropdownMenuSeparator />
+          aria-label={blocked ? "Unblock user" : "Block user"}
+          onClick={() => {
+            if (blocked) {
+              onUnblockUser?.(msg.username);
+            } else {
+              onBlockRequest(msg.username);
+            }
+          }}
+        >
+          <Ban className={icon} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p className="text-xs">{blocked ? "Unblock user" : "Block user"}</p>
+      </TooltipContent>
+    </Tooltip>
+    );
+  };
+
+  const messageOverflowMenu = (
+    msg: ChatMessage,
+    blocked: boolean,
+    size: MessageActionSize = "row",
+    options?: { includeBlock?: boolean; fullMenu?: boolean; sidebarMenu?: boolean },
+  ) => {
+    const { btn, icon } = messageActionStyles(size);
+    return (
+      <DropdownMenu
+        onOpenChange={(open) => {
+          setOpenActionsMenuId(open ? msg.id : null);
+        }}
+      >
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(btn, "data-[state=open]:bg-primary/[0.08]")}
+            aria-label="Message actions"
+          >
+            <MoreVertical className={icon} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          {options?.fullMenu && !isStudioChat ? (
+            <>
+              <DropdownMenuItem className="text-xs" onClick={() => onToggleHide(msg.id)}>
+                {msg.isHidden ? (
+                  <Eye className="mr-2 h-3.5 w-3.5" />
+                ) : (
+                  <EyeOff className="mr-2 h-3.5 w-3.5" />
+                )}
+                {msg.isHidden ? "Unhide" : "Hide"}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onTogglePin(msg.id)}>
+                {msg.isPinned ? (
+                  <PinOff className="mr-2 h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                ) : (
+                  <Pin className="mr-2 h-3.5 w-3.5" />
+                )}
+                {msg.isPinned ? "Unpin" : "Pin"}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onToggleSelect(msg.id)}>
+                <Star className={cn("mr-2 h-3.5 w-3.5", msg.isSelected && "fill-primary text-primary")} />
+                {msg.isSelected ? "Unselect" : "Select"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+          {options?.sidebarMenu && !isStudioChat ? (
+            <DropdownMenuItem className="text-xs" onClick={() => onTogglePin(msg.id)}>
+              {msg.isPinned ? (
+                <PinOff className="mr-2 h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+              ) : (
+                <Pin className="mr-2 h-3.5 w-3.5" />
+              )}
+              {msg.isPinned ? "Unpin" : "Pin"}
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem className="text-xs" onClick={() => onCopyMessage(msg.id, msg.message)}>
+            {copiedMessageId === msg.id ? (
+              <Check className="mr-2 h-3.5 w-3.5 text-primary" />
+            ) : (
+              <Copy className="mr-2 h-3.5 w-3.5" />
+            )}
+            Copy
+          </DropdownMenuItem>
+          {onDeleteMessage ? (
             <DropdownMenuItem
               className="text-xs text-destructive focus:text-destructive"
               onClick={() => onDeleteMessage(msg.id)}
@@ -866,103 +724,196 @@ export function ModerationMessagePanel({
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               Delete
             </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+          ) : null}
+          {!isStudioChat && (options?.includeBlock || options?.sidebarMenu) ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-xs text-destructive focus:text-destructive"
+                onClick={() => {
+                  if (blocked) {
+                    onUnblockUser?.(msg.username);
+                  } else {
+                    onBlockRequest(msg.username);
+                  }
+                }}
+              >
+                <Ban className="mr-2 h-3.5 w-3.5" />
+                {blocked ? "Unblock user" : "Block user"}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
-  const messageActionsBar = (msg: ChatMessage, blocked: boolean, placement: "inline" | "cardCorner") => (
-    <TooltipProvider delayDuration={200}>
-      <div className="flex shrink-0 items-center">
-        {!isStudioChat && msg.isPinned ? messagePinAction(msg) : null}
-        <div className={cn("flex shrink-0 items-center", messageActionsVisibilityClass(placement))}>
-          {messageQuickActions(msg, blocked, !msg.isPinned)}
-          {messageOverflowMenu(msg, placement)}
+  const sidebarActionClusterVisibleClass = (msg: ChatMessage) =>
+    cn(
+      "overflow-hidden transition-[max-height,opacity] duration-150 ease-out",
+      "max-h-0 opacity-0",
+      "group-hover:max-h-8 group-hover:opacity-100",
+      "group-focus-within:max-h-8 group-focus-within:opacity-100",
+      "has-[[data-state=open]]:max-h-8 has-[[data-state=open]]:opacity-100",
+      !isStudioChat && msg.isSelected && "max-h-8 opacity-100",
+      !isStudioChat && msg.isPinned && "max-h-8 opacity-100",
+    );
+
+  const messageSidebarActionCluster = (msg: ChatMessage, blocked: boolean) => {
+    const { cluster } = messageActionStyles("sidebar");
+    return (
+      <TooltipProvider delayDuration={200}>
+        <div className={cn("mt-1", sidebarActionClusterVisibleClass(msg))}>
+          <div className={cluster}>
+            {isStudioChat ? (
+              messageOverflowMenu(msg, blocked, "sidebar")
+            ) : (
+              <>
+                {messageHideAction(msg, "sidebar")}
+                {messageSelectAction(msg, "sidebar")}
+                {messageOverflowMenu(msg, blocked, "sidebar", { sidebarMenu: true })}
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </TooltipProvider>
-  );
+      </TooltipProvider>
+    );
+  };
+
+  const messageRowActionsBar = (msg: ChatMessage, blocked: boolean) => {
+    const { cluster } = messageActionStyles("row");
+    return (
+      <TooltipProvider delayDuration={200}>
+        <div
+          className="flex shrink-0 items-center self-center gap-3 pl-2"
+          onMouseEnter={() => setHoveredMessageId(msg.id)}
+        >
+          {!isStudioChat && msg.isPinned ? messagePinAction(msg, "row") : null}
+          <div className={cn(cluster, messageActionsHoverClass)}>
+            {!isStudioChat ? messageHideAction(msg, "row") : null}
+            {!isStudioChat && !msg.isPinned ? messagePinAction(msg, "row") : null}
+            {!isStudioChat ? messageSelectAction(msg, "row") : null}
+            {!isStudioChat ? messageBlockAction(msg, blocked, "row") : null}
+            {messageOverflowMenu(msg, blocked, "row")}
+          </div>
+        </div>
+      </TooltipProvider>
+    );
+  };
+
+  const messageCardActionsBar = (msg: ChatMessage, blocked: boolean) => {
+    const { cluster } = messageActionStyles("card");
+    return (
+      <TooltipProvider delayDuration={200}>
+        <div
+          className="mt-3 flex items-center justify-end gap-3 border-t border-border/50 pt-3"
+          onMouseEnter={() => setHoveredMessageId(msg.id)}
+        >
+          {!isStudioChat && msg.isPinned ? messagePinAction(msg, "card") : null}
+          <div className={cn(cluster, messageActionsHoverClass)}>
+            {!isStudioChat ? messageHideAction(msg, "card") : null}
+            {!isStudioChat && !msg.isPinned ? messagePinAction(msg, "card") : null}
+            {!isStudioChat ? messageSelectAction(msg, "card") : null}
+            {!isStudioChat
+              ? messageOverflowMenu(msg, blocked, "card", { includeBlock: true })
+              : messageOverflowMenu(msg, blocked, "card")}
+          </div>
+        </div>
+      </TooltipProvider>
+    );
+  };
 
   const messageShellClass = (msg: ChatMessage, blocked: boolean) =>
     cn(
-      "group min-w-0 border transition-colors",
-      layout === "row" &&
+      "group box-border min-w-0 border transition-colors",
+      effectiveLayout === "row" &&
         (isSidebarVariant
-          ? "w-full rounded-xl border-border/50 bg-card/90 px-3 py-2.5 shadow-sm"
-          : "w-full rounded-md border-border/50 bg-card/90 px-2 py-1.5 shadow-sm"),
-      layout === "card" &&
-        "relative flex min-h-[96px] flex-col rounded-xl border-border/50 bg-card/95 p-3 shadow-sm md:min-h-[100px]",
+          ? "w-full min-w-0 rounded-xl border-border/50 bg-card/90 px-2.5 py-2 shadow-none"
+          : "w-full rounded-md border-border/50 bg-card/90 px-3 py-2.5 shadow-sm"),
+      effectiveLayout === "card" &&
+        "relative h-auto w-full self-start rounded-xl border-border/50 bg-card/95 p-3 shadow-sm",
       "hover:border-border hover:bg-muted/15",
       msg.isHighlighted && "border-primary/35 bg-primary/[0.07]",
-      blocked && "opacity-[0.72]",
+      !isStudioChat && blocked && "opacity-[0.72]",
       !isStudioChat && msg.isPinned && "border-orange-600/40 bg-orange-600/[0.06] dark:border-orange-500/35 dark:bg-orange-500/[0.06]",
       !isStudioChat && msg.isSelected && "border-primary/50 bg-primary/10 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)]",
     );
 
-  const messageDragShellClass = (msg: ChatMessage, blocked: boolean) =>
-    cn(
-      messageShellClass(msg, blocked),
-      dragDropEnabled && "cursor-grab active:cursor-grabbing",
-      draggingPayload?.messageId === msg.id && "opacity-45 ring-1 ring-primary/30",
-    );
-
-  const messageDragHandlers = (msg: ChatMessage) =>
-    dragDropEnabled
-      ? {
-          draggable: true as const,
-          onDragStart: (event: DragEvent<HTMLDivElement>) => handleMessageDragStart(event, msg, "visible"),
-          onDragEnd: handleMessageDragEnd,
-        }
-      : {};
-
-  const renderMessage = (msg: ChatMessage) => {
-    const blocked = isUserBlocked(msg.username);
-
-    if (layout === "card") {
-      return (
-        <div key={msg.id} className={messageDragShellClass(msg, blocked)} {...messageDragHandlers(msg)}>
-          <div className="flex min-h-0 flex-1 gap-2">
-            {avatarEl(msg.username)}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1">
-              <div className="flex items-start justify-between gap-1.5">
-                <div className="min-w-0 flex-1">{messageMetaLine(msg, blocked)}</div>
-                {messageActionsBar(msg, blocked, "cardCorner")}
-              </div>
-              {messageBody(msg)}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
+  const renderSidebarMessage = (msg: ChatMessage) => {
+    const blocked = isUserBlockedForChannel(msg.username);
     return (
-      <div key={msg.id} className={messageDragShellClass(msg, blocked)} {...messageDragHandlers(msg)}>
-        <div className="flex gap-2">
+      <div
+        key={msg.id}
+        className={messageShellClass(msg, blocked)}
+        {...messageInteractionHandlers(msg.id)}
+      >
+        <div className="flex w-full min-w-0 items-start gap-2 box-border">
           {avatarEl(msg.username)}
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-1">
-              <div className="min-w-0 flex-1">
-                {messageMetaLine(msg, blocked)}
-                {messageBody(msg)}
-              </div>
-              {messageActionsBar(msg, blocked, "inline")}
-            </div>
+            <div className="mb-0.5">{messageMetaLine(msg, blocked)}</div>
+            {messageBody(msg)}
+            {messageSidebarActionCluster(msg, blocked)}
           </div>
         </div>
       </div>
     );
   };
 
+  const renderMessage = (msg: ChatMessage) => {
+    const blocked = isUserBlockedForChannel(msg.username);
+
+    if (isSidebarVariant) {
+      return renderSidebarMessage(msg);
+    }
+
+    if (effectiveLayout === "card") {
+      return (
+        <div
+          key={msg.id}
+          className={messageShellClass(msg, blocked)}
+          {...messageInteractionHandlers(msg.id)}
+        >
+          <div className="flex items-start gap-2.5">
+            {avatarEl(msg.username)}
+            <div className="min-w-0 flex-1">{messageMetaLine(msg, blocked)}</div>
+          </div>
+          {messageBody(msg, "card")}
+          {messageCardActionsBar(msg, blocked)}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={msg.id}
+        className={messageShellClass(msg, blocked)}
+        {...messageInteractionHandlers(msg.id)}
+      >
+        <div className="flex w-full min-w-0 items-center gap-2.5 box-border">
+          {avatarEl(msg.username)}
+          <div className="min-w-0 flex-1">
+            {messageMetaLine(msg, blocked)}
+            {messageBody(msg)}
+          </div>
+          {messageRowActionsBar(msg, blocked)}
+        </div>
+      </div>
+    );
+  };
+
+  const sidebarFeedClass = "flex w-full min-w-0 flex-col gap-2 pb-0";
+
   const feedClass = cn(
-    "min-w-0 pb-0.5",
-    layout === "row" && "flex flex-col gap-1.5",
-    layout === "card" && "grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]",
+    "min-w-0 w-full pb-0.5",
+    effectiveLayout === "row" && "flex w-full min-w-0 flex-col gap-1.5",
+    effectiveLayout === "card" &&
+      "grid items-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]",
   );
 
   const toolbarIconBtnClass = (active: boolean) =>
     cn(
-      "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors",
+      "flex shrink-0 items-center justify-center rounded-md border transition-colors",
+      isSidebarVariant ? "h-9 w-9" : "h-7 w-7",
       active
         ? "border-primary/45 bg-primary/15 text-primary shadow-sm"
         : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/40 hover:text-foreground",
@@ -974,8 +925,8 @@ export function ModerationMessagePanel({
         <button
           type="button"
           onClick={() => onLayoutChange(l)}
-          className={toolbarIconBtnClass(layout === l)}
-          aria-pressed={layout === l}
+          className={toolbarIconBtnClass(effectiveLayout === l)}
+          aria-pressed={effectiveLayout === l}
           aria-label={label}
         >
           {icon}
@@ -1002,7 +953,7 @@ export function ModerationMessagePanel({
     );
 
   const selectedChatCards = selectedList.map((msg) => {
-    const blocked = isUserBlocked(msg.username);
+    const blocked = isUserBlockedForChannel(msg.username);
     return (
       <ManagementMessageCard
         key={msg.id}
@@ -1010,13 +961,56 @@ export function ModerationMessagePanel({
         blocked={blocked}
         copiedMessageId={copiedMessageId}
         menuAriaLabel="Selected chat actions"
+        quickActions={
+          <TooltipProvider delayDuration={200}>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(managementQuickActionBtnClass, "text-primary")}
+                    aria-label="Unselect message"
+                    onClick={() => onToggleSelect(msg.id)}
+                  >
+                    <Star className="h-4 w-4 fill-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">Unselect</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      managementQuickActionBtnClass,
+                      blocked && "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                    )}
+                    aria-label={blocked ? "Unblock user" : "Block user"}
+                    onClick={() => {
+                      if (blocked) {
+                        onUnblockUser?.(msg.username);
+                      } else {
+                        onBlockRequest(msg.username);
+                      }
+                    }}
+                  >
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">{blocked ? "Unblock user" : "Block user"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        }
         menuItems={[
-          {
-            key: "unselect",
-            label: "Unselect",
-            icon: <Star className="mr-2 h-3.5 w-3.5" />,
-            onClick: () => onToggleSelect(msg.id),
-          },
           {
             key: "copy",
             label: "Copy",
@@ -1035,19 +1029,6 @@ export function ModerationMessagePanel({
                 } satisfies ManagementMenuItem,
               ]
             : []),
-          {
-            key: "block",
-            label: blocked ? "Unblock" : "Block",
-            icon: <Ban className="mr-2 h-3.5 w-3.5" />,
-            onClick: () => {
-              if (blocked) {
-                onUnblockUser?.(msg.username);
-              } else {
-                onBlockRequest(msg.username);
-              }
-            },
-            separatorBefore: true,
-          },
         ]}
       />
     );
@@ -1059,7 +1040,6 @@ export function ModerationMessagePanel({
       user={user}
       messageCount={blockedUserMessageCounts.get(user.username) ?? 0}
       onUnblock={() => onUnblockUser?.(user.username)}
-      onCopyUsername={() => onCopyMessage(`blocked-${user.id}`, user.username)}
     />
   ));
 
@@ -1067,16 +1047,31 @@ export function ModerationMessagePanel({
     <ManagementMessageCard
       key={msg.id}
       msg={msg}
-      blocked={isUserBlocked(msg.username)}
+      blocked={isUserBlockedForChannel(msg.username)}
       copiedMessageId={copiedMessageId}
       menuAriaLabel="Hidden chat actions"
+      quickActions={
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(managementQuickActionBtnClass, "text-primary")}
+                aria-label="Unhide message"
+                onClick={() => onToggleHide(msg.id)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="text-xs">Unhide</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
       menuItems={[
-        {
-          key: "unhide",
-          label: "Unhide",
-          icon: <Eye className="mr-2 h-3.5 w-3.5" />,
-          onClick: () => onToggleHide(msg.id),
-        },
         {
           key: "copy",
           label: "Copy",
@@ -1096,16 +1091,8 @@ export function ModerationMessagePanel({
             ]
           : []),
       ]}
-      draggable={dragDropEnabled}
-      isDragging={draggingPayload?.messageId === msg.id}
-      onDragStart={(event) => handleMessageDragStart(event, msg, "hidden")}
-      onDragEnd={handleMessageDragEnd}
     />
   ));
-
-  const selectedDropHandlers = createManagementDropHandlers("selected");
-  const blockedDropHandlers = createManagementDropHandlers("blocked");
-  const hiddenDropHandlers = createManagementDropHandlers("hidden");
 
   const sidebarAccordionMaxHeight = "max-h-[160px]";
   const moderationAccordionMaxHeights = {
@@ -1124,11 +1111,6 @@ export function ModerationMessagePanel({
     : moderationAccordionMaxHeights.hidden;
   const accordionEmptyCompact = isSidebarVariant;
 
-  const hiddenDragHelper =
-    dragDropEnabled && accordionSections.hidden && !isDragging
-      ? "Drag here to hide · drag out to restore"
-      : undefined;
-
   const managementAccordionSections = (
     <>
       <ManagementAccordionSection
@@ -1137,10 +1119,6 @@ export function ModerationMessagePanel({
         open={accordionSections.selected}
         onOpenChange={(open) => setAccordionOpen("selected", open)}
         maxHeightClass={selectedAccordionMaxHeight}
-        dropZone="selected"
-        dropHandlers={selectedDropHandlers}
-        dropHighlight={dragOverTarget === "selected"}
-        dragOverHint="Drop to select chat"
       >
         {selectedList.length > 0 ? (
           selectedChatCards
@@ -1148,7 +1126,7 @@ export function ModerationMessagePanel({
           <ManagementEmptyState
             compact={accordionEmptyCompact}
             title="No selected chats"
-            description="Drag chats here to select them."
+            description="Select messages from the chat list using the star action."
           />
         )}
       </ManagementAccordionSection>
@@ -1158,10 +1136,6 @@ export function ModerationMessagePanel({
         open={accordionSections.blocked}
         onOpenChange={(open) => setAccordionOpen("blocked", open)}
         maxHeightClass={blockedAccordionMaxHeight}
-        dropZone="blocked"
-        dropHandlers={blockedDropHandlers}
-        dropHighlight={dragOverTarget === "blocked"}
-        dragOverHint="Drop to block user"
       >
         {blockedList.length > 0 ? (
           blockedUserCards
@@ -1169,21 +1143,16 @@ export function ModerationMessagePanel({
           <ManagementEmptyState
             compact={accordionEmptyCompact}
             title="No blocked users"
-            description="Drag a chat here to block the user."
+            description="Block users from the chat list using the block action."
           />
         )}
       </ManagementAccordionSection>
       <ManagementAccordionSection
         title="Hidden Chats"
         count={hiddenList.length}
-        helperText={hiddenDragHelper}
         open={accordionSections.hidden}
         onOpenChange={(open) => setAccordionOpen("hidden", open)}
         maxHeightClass={hiddenAccordionMaxHeight}
-        dropZone="hidden"
-        dropHandlers={hiddenDropHandlers}
-        dropHighlight={dragOverTarget === "hidden"}
-        dragOverHint="Drop to hide chat"
       >
         {hiddenList.length > 0 ? (
           hiddenChatCards
@@ -1191,11 +1160,7 @@ export function ModerationMessagePanel({
           <ManagementEmptyState
             compact={accordionEmptyCompact}
             title="No hidden chats"
-            description={
-              isModerationVariant
-                ? "Hidden chats will appear here when you hide them."
-                : "Drag messages here from the chat list to hide them."
-            }
+            description="Hidden chats will appear here when you hide them from the chat list."
           />
         )}
       </ManagementAccordionSection>
@@ -1209,10 +1174,10 @@ export function ModerationMessagePanel({
   const chatToolbar = (
     <div
       className={cn(
-        "mb-2 flex shrink-0 overflow-visible pt-0.5",
+        "flex shrink-0 overflow-visible",
         isSidebarVariant
-          ? "flex-row items-center gap-2"
-          : "flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5",
+          ? "mb-2.5 flex-row items-center gap-2 pt-0"
+          : "mb-2 flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:gap-2.5",
       )}
     >
       <div className="relative min-h-0 min-w-0 flex-1 overflow-visible px-0.5">
@@ -1221,30 +1186,33 @@ export function ModerationMessagePanel({
           placeholder="Search messages..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className={cn(sidebarInputClass, "pl-9 pr-2.5")}
+          className={cn(sidebarSearchInputClass, "pl-9 pr-2.5")}
         />
       </div>
       <div className="flex shrink-0 items-center justify-end gap-1.5 sm:justify-start">
         <TooltipProvider delayDuration={100}>
-          <div
-            className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/25 p-0.5"
-            role="group"
-            aria-label="Message layout"
-          >
-            {layoutBtn("card", <Grid3x3 className="h-3.5 w-3.5" />, "Card view")}
-            {layoutBtn("row", <List className="h-3.5 w-3.5" />, "Row view")}
-          </div>
+          {!isSidebarVariant ? (
+            <div
+              className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/25 p-0.5"
+              role="group"
+              aria-label="Message layout"
+            >
+              {layoutBtn("card", <Grid3x3 className="h-3.5 w-3.5" />, "Card view")}
+              {layoutBtn("row", <List className="h-3.5 w-3.5" />, "Row view")}
+            </div>
+          ) : null}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 className={cn(
-                  toolbarIconBtnClass(autoScroll),
-                  !autoScroll && "border-border/60 bg-muted/25 shadow-sm",
+                  "flex shrink-0 items-center justify-center rounded-[10px] border transition-colors",
+                  "h-9 w-9",
+                  autoScroll
+                    ? "border-primary/45 bg-[rgba(37,99,235,0.12)] text-[#3b82f6]"
+                    : "border-border/60 bg-transparent text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground",
                 )}
-                aria-label={
-                  autoScroll ? "Disable auto-scroll to latest" : "Enable auto-scroll to latest"
-                }
+                aria-label="Auto scroll"
                 aria-pressed={autoScroll}
                 onClick={() => {
                   const next = !autoScroll;
@@ -1254,12 +1222,12 @@ export function ModerationMessagePanel({
                   }
                 }}
               >
-                <ChevronsDown className="h-3.5 w-3.5" />
+                <AutoScrollIcon />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p className="text-xs">
-                {autoScroll ? "Auto-scroll to latest (on)" : "Auto-scroll to latest (off)"}
+                {autoScroll ? "Auto scroll enabled" : "Enable auto scroll"}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -1269,7 +1237,10 @@ export function ModerationMessagePanel({
             type="button"
             size="sm"
             variant={showHidden ? "default" : "outline"}
-            className="h-[38px] shrink-0 rounded-md border-border/50 px-2.5 text-[11px] font-medium shadow-sm"
+            className={cn(
+              "shrink-0 rounded-md border-border/50 font-medium shadow-sm",
+              isSidebarVariant ? "h-9 px-2 text-[11px]" : "h-[38px] px-2.5 text-[11px]",
+            )}
             onClick={onToggleShowHidden}
           >
             {showHidden ? "Hide hidden" : "Show hidden"}
@@ -1282,8 +1253,8 @@ export function ModerationMessagePanel({
   const chatComposer = (
     <div
       className={cn(
-        "mt-3 flex shrink-0 gap-2 overflow-visible border-t border-border/50 pb-1",
-        isSidebarVariant ? "pt-2.5" : "pt-3",
+        "flex shrink-0 overflow-visible border-t border-border/50",
+        isSidebarVariant ? "mt-2 gap-2 pb-1 pt-2" : "mt-3 gap-2 pb-1 pt-3",
       )}
     >
       <div className="relative min-w-0 flex-1 overflow-visible px-0.5">
@@ -1298,7 +1269,7 @@ export function ModerationMessagePanel({
               onComposerSend();
             }
           }}
-          className={cn(sidebarInputClass, "min-w-0 pl-9 pr-2.5")}
+          className={cn(sidebarComposerInputClass, "min-w-0 pl-9 pr-2.5")}
         />
       </div>
       <Button
@@ -1307,7 +1278,7 @@ export function ModerationMessagePanel({
         disabled={composerSendDisabled}
         className={cn(
           "shrink-0 rounded-md p-0 shadow-sm",
-          isSidebarVariant ? "h-9 w-9" : "h-[38px] w-[38px]",
+          isSidebarVariant ? "h-10 w-10" : "h-[38px] w-[38px]",
         )}
         title="Send message"
       >
@@ -1316,35 +1287,53 @@ export function ModerationMessagePanel({
     </div>
   );
 
-  const mainChatMessages = (
-    <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-md transition-shadow",
-        dropZoneHighlightClass("visible"),
-      )}
-      onDragOver={(event) => handleDragOverZone(event, "visible")}
-      onDragLeave={handleDragLeaveZone}
-      onDrop={handleDropOnVisibleZone}
-    >
+  const mainChatMessages = isSidebarVariant ? (
+    <div className="relative min-h-0 flex-1 basis-0 overflow-hidden">
+      <div
+        ref={scrollRef}
+        className="sidebar-chat-scrollbar absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain pr-1"
+      >
+        <div className={sidebarFeedClass}>
+          {messages.map(renderMessage)}
+          {messages.length === 0 && (
+            <div className="w-full py-6 text-center text-xs text-muted-foreground">No chat messages</div>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md">
       <div
         ref={scrollRef}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1.5 custom-scrollbar force-vertical-scrollbar scrollbar-gutter-stable",
+          "min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-1.5 custom-scrollbar force-vertical-scrollbar scrollbar-gutter-stable",
           feedClass,
         )}
       >
         {messages.map(renderMessage)}
         {messages.length === 0 && (
-          <div className="col-span-full w-full py-6 text-center text-xs text-muted-foreground">
-            {isSidebarVariant ? "No chat messages" : "No messages found."}
+          <div
+            className={cn(
+              "w-full py-6 text-center text-xs text-muted-foreground",
+              effectiveLayout === "card" && "col-span-full",
+            )}
+          >
+            No messages found.
           </div>
         )}
       </div>
     </div>
   );
 
-  const chatMessagesHeading = hasManagementData ? (
-    <div className="mb-2 shrink-0 border-b border-border/40 pb-1.5">
+  const showChatMessagesHeading = hasManagementData || isSidebarVariant;
+
+  const chatMessagesHeading = showChatMessagesHeading ? (
+    <div
+      className={cn(
+        "shrink-0 border-b border-border/40",
+        isSidebarVariant ? "mb-1 pb-1" : "mb-2 pb-1.5",
+      )}
+    >
       <h3 className="text-[11px] font-bold tracking-wide text-foreground">
         Chat Messages · {messages.length}
       </h3>
@@ -1363,29 +1352,34 @@ export function ModerationMessagePanel({
       </div>
     ) : null;
 
-  const sidebarChatPanel =
-    isSidebarVariant && hasManagementData ? (
-      <section className="flex h-full min-h-0 flex-col">
-        <div className="shrink-0">{chatToolbar}</div>
-        {chatMessagesHeading}
-        <div className="min-h-0 flex-1 overflow-hidden">{mainChatMessages}</div>
-        <div className="shrink-0">{chatComposer}</div>
-      </section>
-    ) : null;
-
-  const mainChatSection = !hasManagementData ? (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {chatToolbar}
+  const sidebarChatPanel = isSidebarVariant ? (
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="shrink-0">{chatToolbar}</div>
+      {chatMessagesHeading}
       {mainChatMessages}
-      {chatComposer}
+      <div className="shrink-0">{chatComposer}</div>
+    </section>
+  ) : null;
+
+  const mainChatSection = isModerationVariant && !showManagementColumn ? (
+    <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="shrink-0">{chatToolbar}</div>
+      {chatMessagesHeading}
+      {mainChatMessages}
+      <div className="shrink-0">{chatComposer}</div>
     </section>
   ) : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col px-1.5 py-1.5">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden",
+        isSidebarVariant ? "h-full" : isModerationVariant ? "h-full px-0 py-0" : "h-full px-1.5 py-1.5",
+      )}
+    >
       {sidebarChatPanel}
       {moderationChatPanel}
-      {!hasManagementData ? mainChatSection : null}
+      {mainChatSection}
 
 
       <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>

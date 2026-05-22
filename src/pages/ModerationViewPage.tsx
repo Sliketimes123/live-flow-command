@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ModerationWorkspace } from "@/components/dashboard/ModerationWorkspace";
-import { StatusBar } from "@/components/dashboard/StatusBar";
 import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation/ChatModeration";
 import {
   createDefaultModerationSession,
@@ -11,35 +10,6 @@ import {
   type ModerationSessionSnapshot,
   type ModerationTab,
 } from "@/lib/moderationSession";
-
-const DEFAULT_SOCIAL_DESTINATIONS = [
-  {
-    id: "1",
-    channelName: "NBT UP-Uttarakhand",
-    description: "Congress Press Conference by Supriya Shrinate Live | SIR Vote Chori | Rahul Gandhi",
-    status: "ONLINE" as const,
-    platform: "YouTube" as const,
-    logo: "NBT",
-    logoColor: "bg-black",
-    textColor: "text-white",
-    subText: "यूपी-उत्तराखंड",
-    subTextColor: "text-red-600",
-    isPublished: true,
-  },
-  {
-    id: "2",
-    channelName: "Navbharat Times नवभारत",
-    description: "Congress Press Conference by Supriya Shrinate Live | SIR | BLO | Vote Chori | Rahul Gandhi | BJP",
-    status: "ONLINE" as const,
-    platform: "YouTube" as const,
-    logo: "NBT",
-    logoColor: "bg-red-600",
-    textColor: "text-white",
-    subText: "नवभारत टाइम्स",
-    subTextColor: "text-white",
-    isPublished: true,
-  },
-];
 
 function parseTab(value: string | null): ModerationTab | undefined {
   if (value === "comments" || value === "qa" || value === "studio") {
@@ -51,7 +21,6 @@ function parseTab(value: string | null): ModerationTab | undefined {
 const ModerationViewPage = () => {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const eventId = eventIdParam ?? "unknown";
 
   const initialSnapshot = useMemo(() => {
@@ -69,8 +38,9 @@ const ModerationViewPage = () => {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>(initialSnapshot.blockedUsers);
   const [notifications, setNotifications] = useState(initialSnapshot.notifications);
   const [elapsedTime, setElapsedTime] = useState(initialSnapshot.elapsedTime);
-  const [viewType] = useState<"input" | "output">("input");
-  const [activeSource] = useState("Camera-1");
+  const [activeTab, setActiveTab] = useState<ModerationTab>(initialTab);
+  const [qaQueueCount, setQaQueueCount] = useState(0);
+  const [studioCount, setStudioCount] = useState(0);
 
   const persistSession = useCallback(
     (patch: Partial<ModerationSessionSnapshot> = {}) => {
@@ -119,10 +89,6 @@ const ModerationViewPage = () => {
       return next;
     });
   }, [messages, blockedUsers, notifications, elapsedTime]);
-
-  const handleBack = () => {
-    navigate("/");
-  };
 
   const handleBlockUser = (username: string) => {
     const isAlreadyBlocked = blockedUsers.some((user) => user.username === username);
@@ -190,6 +156,25 @@ const ModerationViewPage = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
+  const moderationTabs = useMemo(
+    () => [
+      { key: "comments" as const, label: "Chat", count: messages.length, enabled: session.commentsEnabled },
+      { key: "qa" as const, label: "Q&A", count: qaQueueCount, enabled: session.qnaEnabled },
+      { key: "studio" as const, label: "Studio Chat", count: studioCount, enabled: true },
+    ],
+    [messages.length, qaQueueCount, studioCount, session.commentsEnabled, session.qnaEnabled],
+  );
+
+  useEffect(() => {
+    if (activeTab === "comments" && !session.commentsEnabled) {
+      setActiveTab(session.qnaEnabled ? "qa" : "studio");
+      return;
+    }
+    if (activeTab === "qa" && !session.qnaEnabled) {
+      setActiveTab(session.commentsEnabled ? "comments" : "studio");
+    }
+  }, [activeTab, session.commentsEnabled, session.qnaEnabled]);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <DashboardHeader
@@ -208,9 +193,11 @@ const ModerationViewPage = () => {
         onSettings={() => undefined}
         onStartRecording={() => undefined}
         onEndEvent={() => undefined}
-        onBack={handleBack}
         notifications={notifications}
         onMarkAllNotificationsRead={markAllNotificationsRead}
+        moderationTabs={moderationTabs}
+        activeModerationTab={activeTab}
+        onModerationTabChange={setActiveTab}
       />
 
       <main className="min-h-0 flex-1 overflow-hidden">
@@ -219,7 +206,7 @@ const ModerationViewPage = () => {
           blockedUsers={blockedUsers}
           commentsEnabled={session.commentsEnabled}
           qnaEnabled={session.qnaEnabled}
-          initialTab={initialTab}
+          activeTab={activeTab}
           onBlockUser={handleBlockUser}
           onUnblockUser={handleUnblockUser}
           onToggleHide={handleToggleHide}
@@ -228,25 +215,11 @@ const ModerationViewPage = () => {
           onDeleteMessage={handleDeleteMessage}
           onSendCommentMessage={handleSendCommentMessage}
           onTabViewed={(tab) => persistSession({ activeTab: tab })}
+          onQaQueueCountChange={setQaQueueCount}
+          onStudioCountChange={setStudioCount}
         />
       </main>
 
-      <StatusBar
-        publishingHealth={session.publishingHealth}
-        bitrate={3500}
-        fps={30}
-        cpuUsage={45}
-        messages={messages}
-        blockedUsers={blockedUsers}
-        onBlockUser={handleBlockUser}
-        onUnblockUser={handleUnblockUser}
-        onToggleSelect={handleToggleSelect}
-        onDeleteMessage={handleDeleteMessage}
-        viewType={viewType}
-        activeSource={activeSource}
-        commentsEnabled={session.commentsEnabled}
-        socialDestinations={DEFAULT_SOCIAL_DESTINATIONS}
-      />
     </div>
   );
 };

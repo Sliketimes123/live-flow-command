@@ -1,7 +1,6 @@
 import { Play } from "lucide-react";
 import { LiveLogTable } from "./LiveLogTable";
-import { LogPreviewDialog } from "./LogPreviewDialog";
-import inputStreamIcon from "@/assets/input-stream-icon.png";
+import { StreamDirectionLabel } from "./StreamDirectionLabel";
 
 export function EventHealthColumn() {
   const inputData = {
@@ -27,7 +26,7 @@ export function EventHealthColumn() {
   const inputLogs = [
     {
       id: 1,
-      time: "03:14 PM",
+      time: "15:14",
       level: "Info" as const,
       source: "Ingest",
       message: "Handshake OK · H.264",
@@ -35,7 +34,7 @@ export function EventHealthColumn() {
     },
     {
       id: 2,
-      time: "03:14 PM",
+      time: "15:14",
       level: "Info" as const,
       source: "Control",
       message: "Responded 200 GET",
@@ -43,7 +42,7 @@ export function EventHealthColumn() {
     },
     {
       id: 3,
-      time: "03:15 PM",
+      time: "15:15",
       level: "Warn" as const,
       source: "Bitrate",
       message: "1420k · Buffer 74%",
@@ -51,7 +50,7 @@ export function EventHealthColumn() {
     },
     {
       id: 4,
-      time: "03:15 PM",
+      time: "15:15",
       level: "Error" as const,
       source: "Network",
       message: "Packet loss 3.4% · Jitter 29ms",
@@ -59,7 +58,7 @@ export function EventHealthColumn() {
     },
     {
       id: 5,
-      time: "03:16 PM",
+      time: "15:16",
       level: "Info" as const,
       source: "Reconnect",
       message: "OK · ap-south-1",
@@ -67,7 +66,7 @@ export function EventHealthColumn() {
     },
     {
       id: 6,
-      time: "03:16 PM",
+      time: "15:16",
       level: "Warn" as const,
       source: "Queue",
       message: "Depth 12 · Decode 18ms",
@@ -78,24 +77,16 @@ export function EventHealthColumn() {
   return (
     <div className="h-full min-h-0 rounded-2xl border border-border/70 bg-card p-4">
       <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
-        {/* Header: icon + metadata on one row; Healthy on the right */}
-        <div className="flex w-full min-w-0 shrink-0 items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-            <img
-              src={inputStreamIcon}
-              alt=""
-              aria-label="Input stream"
-              title="Input stream"
-              className="h-[18px] w-[18px] shrink-0 object-contain opacity-90 dark:brightness-0 dark:invert dark:opacity-95"
-            />
-            <p
-              className="min-w-0 truncate text-xs font-medium leading-snug text-slate-700 dark:text-slate-200"
-              title={inputMetadataLine}
-            >
-              {inputMetadataLine}
-            </p>
-          </div>
-          <span className={`${statusBadgeClass} shrink-0 ${healthTextColor[inputData.streamHealth]}`}>
+        {/* Header: icon left; metadata centered; Healthy on the right */}
+        <div className="grid w-full min-w-0 shrink-0 grid-cols-[auto_1fr_auto] items-center gap-3">
+          <StreamDirectionLabel direction="in" className="justify-self-start" />
+          <p
+            className="min-w-0 truncate whitespace-nowrap text-center text-[13px] font-semibold leading-snug text-muted-foreground"
+            title={inputMetadataLine}
+          >
+            {inputMetadataLine}
+          </p>
+          <span className={`${statusBadgeClass} shrink-0 justify-self-end ${healthTextColor[inputData.streamHealth]}`}>
             Healthy
           </span>
         </div>
@@ -109,19 +100,6 @@ export function EventHealthColumn() {
 
         {/* Logs section */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold tracking-[0.5px] text-slate-700 dark:text-slate-300">
-              Logs · {inputLogs.length} events
-            </span>
-            <LogPreviewDialog
-              title="Logs"
-              description="Input stream — expanded log view."
-              logs={inputLogs}
-              emptyMessage="No input logs available"
-              iconOnly
-              triggerClassName="bg-background/90"
-            />
-          </div>
           <LiveLogTable
             logs={inputLogs}
             emptyMessage="No input logs available"

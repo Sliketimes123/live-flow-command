@@ -303,7 +303,7 @@ export function QAPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
-        !isSidebar && "rounded-xl border border-border/35 bg-card/30 p-1.5 shadow-sm backdrop-blur-[2px]",
+        !isSidebar && "bg-transparent p-0",
         isSidebar && "min-h-0 flex-1",
       )}
     >
@@ -315,7 +315,7 @@ export function QAPanel({
         <div
           className={cn(
             "flex w-full shrink-0",
-            isSidebar ? "flex-col gap-2.5" : "mb-2.5 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3",
+            isSidebar ? "flex-col gap-2.5" : "mb-2 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3",
           )}
         >
           <TabsList
@@ -690,7 +690,7 @@ function QueueQuestionCard({
           </Button>
         </div>
       </div>
-      <p className="mb-2.5 text-sm font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
+      <p className="mb-2.5 text-[12px] font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
         {question.question}
       </p>
       <div className={qaActionRow}>
@@ -790,7 +790,7 @@ function SelectedQuestionCard({
         </div>
       </div>
       <p
-        className={`text-sm font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90 ${!question.assignedTo ? "mb-2.5" : "mb-0"}`}
+        className={`text-[12px] font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90 ${!question.assignedTo ? "mb-2.5" : "mb-0"}`}
       >
         {question.question}
       </p>
@@ -892,7 +892,7 @@ function ClosedQuestionCard({
           </Button>
         </div>
       </div>
-      <p className="mb-2.5 text-sm font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
+      <p className="mb-2.5 text-[12px] font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
         {question.question}
       </p>
       <div className={qaActionRow}>
@@ -946,7 +946,7 @@ function QuestionCard({
               <span className="text-[10px] text-destructive font-medium">(Blocked)</span>
             )}
           </div>
-          <p className="text-xs text-foreground/90 leading-snug">{question.question}</p>
+          <p className="text-[12px] text-foreground/90 leading-snug">{question.question}</p>
         </div>
 
         <div className="flex items-center gap-1.5">

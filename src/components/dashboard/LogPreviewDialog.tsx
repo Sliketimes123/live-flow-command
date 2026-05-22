@@ -56,6 +56,7 @@ export function LogPreviewDialog({
           title={title}
           logs={logs}
           emptyMessage={emptyMessage}
+          compact
           tableHeight="max-h-[min(calc(92vh-10.5rem),24rem)]"
           showTitle={false}
           bordered={true}

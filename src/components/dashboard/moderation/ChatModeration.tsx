@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMemo, useState, useRef, useEffect, type RefObject } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   ModerationMessagePanel,
   type ChatPanelVariant,
@@ -77,6 +78,8 @@ export function ChatModeration({
   const [internalStudioAutoScroll, setInternalStudioAutoScroll] = useState(false);
   const [commentChatLayout, setCommentChatLayout] = useState<ModerationChatLayout>("row");
   const [studioChatLayout, setStudioChatLayout] = useState<ModerationChatLayout>("row");
+  const [commentsAutoScrollPaused, setCommentsAutoScrollPaused] = useState(false);
+  const [studioAutoScrollPaused, setStudioAutoScrollPaused] = useState(false);
 
   // Use prop if provided for the active tab, otherwise fall back to internal state
   const autoScroll = activeTab === "comments" && propAutoScroll !== undefined
@@ -85,6 +88,9 @@ export function ChatModeration({
   const studioAutoScroll = activeTab === "studio" && propAutoScroll !== undefined
     ? propAutoScroll
     : internalStudioAutoScroll;
+
+  const commentsAutoScrollActive = autoScroll && !commentsAutoScrollPaused;
+  const studioAutoScrollActive = studioAutoScroll && !studioAutoScrollPaused;
 
   const handleAutoScrollChange = (value: boolean) => {
     if (onAutoScrollChange) {
@@ -154,6 +160,7 @@ export function ChatModeration({
   };
 
   const handleBlockRequest = (username: string) => {
+    if (activeTab === "studio") return;
     setSelectedUserToBlock(username);
     setIsConfirmBlockOpen(true);
   };
@@ -279,52 +286,52 @@ export function ChatModeration({
 
   // Auto scroll for Comments tab - only when Comments tab is active
   useEffect(() => {
-    if (activeTab === "comments" && autoScroll && visibleMessages.length > 0) {
+    if (activeTab === "comments" && commentsAutoScrollActive && visibleMessages.length > 0) {
       // Use requestAnimationFrame for better timing
       requestAnimationFrame(() => {
         setTimeout(() => {
           // Double-check tab is still active before scrolling
-          if (activeTab === "comments" && autoScroll) {
+          if (activeTab === "comments" && commentsAutoScrollActive) {
             scrollToBottom(commentsScrollRef);
           }
         }, 50);
       });
     }
-  }, [visibleMessages.length, autoScroll, activeTab]);
+  }, [visibleMessages.length, commentsAutoScrollActive, activeTab]);
 
   // Auto scroll for Studio Chat tab - only when Studio Chat tab is active
   useEffect(() => {
-    if (activeTab === "studio" && studioAutoScroll && filteredStudioMessages.length > 0) {
+    if (activeTab === "studio" && studioAutoScrollActive && filteredStudioMessages.length > 0) {
       // Use requestAnimationFrame for better timing
       requestAnimationFrame(() => {
         setTimeout(() => {
           // Double-check tab is still active before scrolling
-          if (activeTab === "studio" && studioAutoScroll) {
+          if (activeTab === "studio" && studioAutoScrollActive) {
             scrollToBottom(studioScrollRef);
           }
         }, 50);
       });
     }
-  }, [filteredStudioMessages.length, studioAutoScroll, activeTab]);
+  }, [filteredStudioMessages.length, studioAutoScrollActive, activeTab]);
 
   // Scroll to bottom when switching to Comments tab if auto-scroll is enabled
   useEffect(() => {
     const prevTab = prevActiveTabRef.current;
     prevActiveTabRef.current = activeTab;
 
-    if (activeTab === "comments" && prevTab !== "comments" && autoScroll && visibleMessages.length > 0) {
+    if (activeTab === "comments" && prevTab !== "comments" && commentsAutoScrollActive && visibleMessages.length > 0) {
       setTimeout(() => scrollToBottom(commentsScrollRef), 100);
     }
-  }, [activeTab, autoScroll, visibleMessages.length]);
+  }, [activeTab, commentsAutoScrollActive, visibleMessages.length]);
 
   // Scroll to bottom when switching to Studio Chat tab if auto-scroll is enabled
   useEffect(() => {
     const prevTab = prevActiveTabRef.current;
 
-    if (activeTab === "studio" && prevTab !== "studio" && studioAutoScroll && filteredStudioMessages.length > 0) {
+    if (activeTab === "studio" && prevTab !== "studio" && studioAutoScrollActive && filteredStudioMessages.length > 0) {
       setTimeout(() => scrollToBottom(studioScrollRef), 100);
     }
-  }, [activeTab, studioAutoScroll, filteredStudioMessages.length]);
+  }, [activeTab, studioAutoScrollActive, filteredStudioMessages.length]);
 
   useEffect(() => {
     if (!onMessageCountChange) return;
@@ -350,12 +357,13 @@ export function ChatModeration({
       blockedUsers={blockedUsers}
       allMessages={messages}
       onUnblockUser={onUnblockUser}
-      layout={commentChatLayout}
+      layout={variant === "sidebar" ? "row" : commentChatLayout}
       onLayoutChange={setCommentChatLayout}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       autoScroll={autoScroll}
       onAutoScrollChange={handleAutoScrollChange}
+      onAutoScrollPauseChange={setCommentsAutoScrollPaused}
       scrollRef={commentsScrollRef}
       requestScrollToBottom={() => scrollToBottom(commentsScrollRef)}
       copiedMessageId={copiedMessageId}
@@ -380,22 +388,21 @@ export function ChatModeration({
       variant={variant}
       chatChannel="studio"
       messages={filteredStudioMessages}
-      layout={studioChatLayout}
+      layout={variant === "sidebar" ? "row" : studioChatLayout}
       onLayoutChange={setStudioChatLayout}
       searchQuery={studioSearchQuery}
       onSearchChange={setStudioSearchQuery}
       autoScroll={studioAutoScroll}
       onAutoScrollChange={handleStudioAutoScrollChange}
+      onAutoScrollPauseChange={setStudioAutoScrollPaused}
       scrollRef={studioScrollRef}
       requestScrollToBottom={() => scrollToBottom(studioScrollRef)}
       copiedMessageId={copiedMessageId}
-      isUserBlocked={isUserBlocked}
       onToggleHide={() => {}}
       onTogglePin={() => {}}
       onToggleSelect={() => {}}
       onCopyMessage={handleCopy}
       onDeleteMessage={handleStudioDeleteMessage}
-      onBlockRequest={handleBlockRequest}
       composerPlaceholder="Send internal studio message..."
       composerValue={newStudioMessage}
       onComposerChange={setNewStudioMessage}
@@ -407,7 +414,12 @@ export function ChatModeration({
 
   return (
     <>
-      <div className="flex flex-col h-full">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          variant === "sidebar" ? "h-full" : "h-full min-h-0",
+        )}
+      >
         {activeTab === "comments" && renderCommentsContent()}
         {activeTab === "studio" && renderStudioChatContent()}
       </div>

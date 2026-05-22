@@ -33,6 +33,7 @@ import {
 import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause, X, Bell } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import type { ModerationTab } from "@/lib/moderationSession";
 
 interface DashboardHeaderProps {
   /** `moderation` hides live/recording control actions (dedicated moderation workspace). */
@@ -63,6 +64,14 @@ interface DashboardHeaderProps {
     isRead: boolean;
   }>;
   onMarkAllNotificationsRead?: () => void;
+  moderationTabs?: Array<{
+    key: ModerationTab;
+    label: string;
+    count: number;
+    enabled?: boolean;
+  }>;
+  activeModerationTab?: ModerationTab;
+  onModerationTabChange?: (tab: ModerationTab) => void;
 }
 
 export function DashboardHeader({
@@ -86,6 +95,9 @@ export function DashboardHeader({
   onBack,
   notifications = [],
   onMarkAllNotificationsRead,
+  moderationTabs,
+  activeModerationTab,
+  onModerationTabChange,
 }: DashboardHeaderProps) {
   const liveControlItemClass = "gap-2.5";
   const liveControlIconClass = "w-3.5 h-3.5 shrink-0";
@@ -99,6 +111,7 @@ export function DashboardHeader({
   const [recordingAction, setRecordingAction] = useState<"start" | "stop">("start");
   const { toast } = useToast();
   const unreadNotificationCount = notifications.filter((notification) => !notification.isRead).length;
+  const visibleModerationTabs = (moderationTabs ?? []).filter((tab) => tab.enabled !== false);
 
   const handleCopy = async (text: string, fieldName: string) => {
     try {
@@ -133,48 +146,149 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/70 bg-card px-3">
-      <div className="flex min-w-0 items-center gap-2">
-        <Button
-          onClick={handleBackClick}
-          variant="ghost"
-          size="sm"
-          className="group h-7 w-7 shrink-0 p-0"
-          title="Go back"
-        >
-          <ChevronLeft className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground group-focus-visible:text-foreground" />
-        </Button>
-        <div className="h-3.5 w-px shrink-0 bg-border" />
-        <h1 className="truncate text-sm font-semibold leading-tight text-foreground">{eventTitle}</h1>
-        {eventId && (
-          <>
-            <div className="hidden h-3.5 w-px shrink-0 bg-border sm:block" />
-            <TooltipProvider delayDuration={300}>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleCopy(eventId, "Event ID")}
-                    className="group hidden max-w-[min(12rem,28vw)] shrink-0 items-center gap-1 rounded border border-border bg-muted/30 px-1.5 py-0.5 transition-colors hover:bg-muted/50 sm:flex"
+    <header className="flex h-[50px] shrink-0 items-center justify-between border-b border-border/70 bg-card px-4">
+      {mode === "moderation" ? (
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+          {eventId ? (
+            <>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(eventId, "Event ID")}
+                      className="group flex max-w-[min(12rem,28vw)] shrink-0 items-center gap-1 rounded border border-border bg-muted/30 px-1.5 py-0.5 transition-colors hover:bg-muted/50"
+                    >
+                      <img src="/slike_mini.svg" alt="" className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate font-mono text-[11px]">{eventId}</span>
+                      {copiedField === "Event ID" ? (
+                        <Check className="h-3 w-3 shrink-0 text-primary" />
+                      ) : (
+                        <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click to copy Event ID</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <div className="h-5 w-px shrink-0 bg-border/80 opacity-80" aria-hidden />
+            </>
+          ) : null}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <div className="min-w-0 max-w-[260px] shrink overflow-hidden">
+                  <h1
+                    title={eventTitle}
+                    className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-tight text-foreground"
                   >
-                    <img src="/slike_mini.svg" alt="" className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate font-mono text-[11px]">{eventId}</span>
-                    {copiedField === "Event ID" ? (
-                      <Check className="h-3 w-3 shrink-0 text-primary" />
-                    ) : (
-                      <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Click to copy Event ID</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </>
-        )}
-      </div>
+                    {eventTitle}
+                  </h1>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="max-w-sm">
+                <p className="text-xs">{eventTitle}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="h-5 w-px shrink-0 bg-border/80 opacity-80" aria-hidden />
+          <div className="flex h-10 shrink-0 items-center gap-[22px] bg-transparent p-0">
+            {visibleModerationTabs.map((tab) => {
+              const isActive = activeModerationTab === tab.key;
+              const isStudio = tab.key === "studio";
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => onModerationTabChange?.(tab.key)}
+                  className={`relative inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap p-0 text-sm leading-none transition-colors ${
+                    isActive
+                      ? "font-bold text-[#0f4fd8] dark:text-[#60a5fa]"
+                      : "font-semibold text-[#64748b] hover:text-foreground"
+                  }`}
+                  aria-pressed={isActive}
+                  title={isStudio ? "Studio Chat" : undefined}
+                >
+                  <span>{isStudio ? "Studio" : tab.label}</span>
+                  <span
+                    className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[5px] text-[11px] font-bold tabular-nums ${
+                      isActive
+                        ? "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[rgba(37,99,235,0.24)] dark:text-[#93c5fd]"
+                        : "bg-[#eef2f7] text-[#64748b] dark:bg-[rgba(148,163,184,0.18)] dark:text-muted-foreground"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#0f4fd8] dark:bg-[#60a5fa]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+          <Button
+            onClick={handleBackClick}
+            variant="ghost"
+            size="sm"
+            className="group h-7 w-7 shrink-0 p-0"
+            title="Go back"
+          >
+            <ChevronLeft className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground group-focus-visible:text-foreground" />
+          </Button>
+          <div className="h-5 w-px shrink-0 bg-border/80 opacity-80" aria-hidden />
+          {eventId ? (
+            <>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(eventId, "Event ID")}
+                      className="group flex max-w-[min(12rem,28vw)] shrink-0 items-center gap-1 rounded border border-border bg-muted/30 px-1.5 py-0.5 transition-colors hover:bg-muted/50"
+                    >
+                      <img src="/slike_mini.svg" alt="" className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate font-mono text-[11px]">{eventId}</span>
+                      {copiedField === "Event ID" ? (
+                        <Check className="h-3 w-3 shrink-0 text-primary" />
+                      ) : (
+                        <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click to copy Event ID</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <div className="h-5 w-px shrink-0 bg-border/80 opacity-80" aria-hidden />
+            </>
+          ) : null}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <div className="min-w-0 max-w-[260px] shrink overflow-hidden">
+                  <h1
+                    title={eventTitle}
+                    className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-tight text-foreground"
+                  >
+                    {eventTitle}
+                  </h1>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="max-w-sm">
+                <p className="text-xs">{eventTitle}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
 
-      <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
         {/* User Counts + Notifications */}
         <div className="flex items-center gap-2 border-r border-border pr-2 sm:gap-2.5 sm:pr-3">
           {audienceCountEnabled && (

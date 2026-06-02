@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface LiveLog {
@@ -42,10 +43,24 @@ const expandedRowGrid =
 const expandedSeverityClass =
   "shrink-0 justify-self-center text-center text-[10px] font-bold uppercase tabular-nums";
 
-const monitoringRowSeverityClass: Record<LiveLog["level"], string> = {
-  Info: "border-l-[3px] border-l-[#3b82f6] bg-[rgba(59,130,246,0.08)]",
-  Warn: "border-l-[3px] border-l-[#f59e0b] bg-[rgba(245,158,11,0.08)]",
-  Error: "border-l-[3px] border-l-[#ef4444] bg-[rgba(239,68,68,0.08)]",
+// All rows are transparent — severity communicated through dot color and ERROR text weight only.
+const ROW_BASE = "bg-transparent px-2 gap-[8px] hover:bg-slate-400/[0.06]";
+const rowClass: Record<LiveLog["level"], string> = {
+  Info: ROW_BASE,
+  Warn: ROW_BASE,
+  Error: ROW_BASE,
+};
+
+const dotColorClass: Record<LiveLog["level"], string> = {
+  Info: "bg-[#3b82f6]",
+  Warn: "bg-[#f59e0b]",
+  Error: "bg-[#ef4444]",
+};
+
+const messageWeightClass: Record<LiveLog["level"], string> = {
+  Info: "font-[500] text-foreground/85",
+  Warn: "font-[500] text-foreground/88",
+  Error: "font-[600] text-foreground/95",
 };
 
 function compactPreviewText(log: LiveLog): string {
@@ -92,26 +107,38 @@ function MonitoringLogRowsExpanded({ logs }: { logs: LiveLog[] }) {
 
 function MonitoringLogRowsCompact({ logs }: { logs: LiveLog[] }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col">
       {logs.map((log) => {
         const line = compactPreviewText(log);
         return (
           <div
             key={log.id}
             className={cn(
-              "flex items-center gap-3 rounded-[10px] px-3 py-2.5",
-              monitoringRowSeverityClass[log.level],
+              "group flex h-[26px] items-center transition-colors duration-100",
+              rowClass[log.level],
             )}
           >
-            <span className="w-11 shrink-0 whitespace-nowrap text-[11px] font-medium tabular-nums text-muted-foreground">
+            <span className="w-[42px] shrink-0 whitespace-nowrap font-mono text-[11px] font-[500] tabular-nums text-[#94a3b8]">
               {log.time}
             </span>
+            <span className={cn("h-[6px] w-[6px] shrink-0 rounded-full", dotColorClass[log.level])} />
             <span
-              className="min-w-0 flex-1 truncate text-[11px] font-normal leading-snug text-foreground/90"
+              className={cn(
+                "min-w-0 flex-1 truncate font-mono text-[12px] leading-[1.2] tracking-[-0.1px]",
+                messageWeightClass[log.level],
+              )}
               title={line}
             >
               {line}
             </span>
+            <button
+              type="button"
+              className="hidden h-5 w-5 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover:flex group-hover:opacity-40 hover:!opacity-80"
+              title="Copy"
+              onClick={() => navigator.clipboard?.writeText(`${log.time}  ${line}`)}
+            >
+              <Copy className="h-3 w-3" />
+            </button>
           </div>
         );
       })}

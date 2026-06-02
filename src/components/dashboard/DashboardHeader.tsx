@@ -30,9 +30,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause, X, Bell } from "lucide-react";
+import { Play, Square, Eye, Users, Circle, ChevronLeft, Copy, Check, ChevronDown, Pause, X, Bell, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import type { ModerationTab } from "@/lib/moderationSession";
 
 interface DashboardHeaderProps {
@@ -72,6 +73,8 @@ interface DashboardHeaderProps {
   }>;
   activeModerationTab?: ModerationTab;
   onModerationTabChange?: (tab: ModerationTab) => void;
+  isDarkTheme?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export function DashboardHeader({
@@ -98,6 +101,8 @@ export function DashboardHeader({
   moderationTabs,
   activeModerationTab,
   onModerationTabChange,
+  isDarkTheme = true,
+  onToggleTheme,
 }: DashboardHeaderProps) {
   const liveControlItemClass = "gap-2.5";
   const liveControlIconClass = "w-3.5 h-3.5 shrink-0";
@@ -362,8 +367,29 @@ export function DashboardHeader({
           </Dialog>
         </div>
 
+        {/* Theme toggle — moderation window only */}
+        {mode === "moderation" && (
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/35 hover:text-foreground"
+                  aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {isDarkTheme ? <Sun className="h-[16px] w-[16px]" /> : <Moon className="h-[16px] w-[16px]" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{isDarkTheme ? "Light mode" : "Dark mode"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         {/* Live Status and Timer */}
-        <div className="flex items-center gap-2 border-r border-border pr-2 sm:gap-2.5 sm:pr-3">
+        <div className={cn("flex items-center gap-2 sm:gap-2.5", mode === "admin" && "border-r border-border pr-2 sm:pr-3")}>
           <div className="flex items-center gap-1">
             <div
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${

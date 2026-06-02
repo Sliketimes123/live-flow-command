@@ -16,6 +16,7 @@ import {
   ModerationMessagePanel,
   type ChatPanelVariant,
   type ModerationChatLayout,
+  type ComposerMessageType,
 } from "./ModerationMessagePanel";
 
 export interface ChatMessage {
@@ -49,7 +50,7 @@ interface ChatModerationProps {
   activeTab?: "comments" | "studio";
   autoScroll?: boolean;
   onAutoScrollChange?: (enabled: boolean) => void;
-  onSendCommentMessage?: (message: string) => void;
+  onSendCommentMessage?: (message: string, messageType: ComposerMessageType) => void;
   onMessageCountChange?: (count: number) => void;
 }
 
@@ -251,14 +252,17 @@ export function ChatModeration({
     });
   }, [studioMessages, studioSearchQuery]);
 
-  const handleSendCommentMessage = () => {
+  const handleSendCommentMessage = (messageType: ComposerMessageType = "broadcast") => {
     if (!newCommentMessage.trim()) return;
 
-    onSendCommentMessage?.(newCommentMessage.trim());
+    onSendCommentMessage?.(newCommentMessage.trim(), messageType);
     setNewCommentMessage("");
     toast({
-      title: "Message sent",
-      description: "Your message was posted to comments",
+      title: messageType === "pinned" ? "Message pinned" : "Message sent",
+      description:
+        messageType === "pinned"
+          ? "Your message was pinned to the top of chat"
+          : "Your message was posted to comments",
     });
   };
 

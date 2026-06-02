@@ -66,6 +66,78 @@ export function OutputHealthColumn({
       message: "Stream health degraded",
       previewMessage: "Stream health degraded",
     },
+    {
+      id: 5,
+      time: "15:16",
+      level: "Info" as const,
+      source: "CDN",
+      message: "Edge node assigned · sin1",
+      previewMessage: "CDN edge node assigned · sin1",
+    },
+    {
+      id: 6,
+      time: "15:17",
+      level: "Warn" as const,
+      source: "Buffer",
+      message: "Playback stall · 1.2s",
+      previewMessage: "Buffer playback stall · 1.2s",
+    },
+    {
+      id: 7,
+      time: "15:17",
+      level: "Info" as const,
+      source: "Manifest",
+      message: "Playlist refreshed · 6s",
+      previewMessage: "Manifest playlist refreshed · 6s",
+    },
+    {
+      id: 8,
+      time: "15:18",
+      level: "Error" as const,
+      source: "Segment",
+      message: "404 · seg_0047.ts missing",
+      previewMessage: "Segment 404 · seg_0047.ts missing",
+    },
+    {
+      id: 9,
+      time: "15:18",
+      level: "Info" as const,
+      source: "ABR",
+      message: "Switched to 720p · 2800k",
+      previewMessage: "ABR switched to 720p · 2800k",
+    },
+    {
+      id: 10,
+      time: "15:19",
+      level: "Warn" as const,
+      source: "Latency",
+      message: "E2E 8.4s · above threshold",
+      previewMessage: "Latency E2E 8.4s · above threshold",
+    },
+    {
+      id: 11,
+      time: "15:19",
+      level: "Info" as const,
+      source: "CDN",
+      message: "Cache HIT ratio 94%",
+      previewMessage: "CDN cache HIT ratio 94%",
+    },
+    {
+      id: 12,
+      time: "15:20",
+      level: "Error" as const,
+      source: "Health",
+      message: "Frame drop rate 12% · critical",
+      previewMessage: "Health frame drop rate 12% · critical",
+    },
+    {
+      id: 13,
+      time: "15:20",
+      level: "Info" as const,
+      source: "Manifest",
+      message: "Request 200 · 38ms",
+      previewMessage: "Manifest request 200 · 38ms",
+    },
   ];
 
   const publishedDestinations = socialDestinations.filter((d) => d.isPublished);
@@ -79,13 +151,14 @@ export function OutputHealthColumn({
     <div className="h-full min-h-0 rounded-2xl border border-border/70 bg-card p-4">
       <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
         {/* Header: icon left; metadata centered; Healthy on the right */}
-        <div className="grid w-full min-w-0 shrink-0 grid-cols-[auto_1fr_auto] items-center gap-3">
+        <div className="grid w-full min-w-0 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[14px]">
           <StreamDirectionLabel direction="out" className="justify-self-start" />
           <p
-            className="min-w-0 truncate whitespace-nowrap text-center text-[13px] font-semibold leading-snug text-muted-foreground"
+            className="min-w-0 truncate whitespace-nowrap text-center text-[13px] leading-none"
             title={outputMetadataLine}
           >
-            {outputMetadataLine}
+            <span className="font-[600] text-foreground">{outputData.streamType}</span>
+            <span className="font-[500] text-muted-foreground/80">{` · ${outputData.encryption} Enc · ${outputData.quality} Quality`}</span>
           </p>
           <div className="justify-self-end">
             <HoverCard openDelay={150} closeDelay={100}>

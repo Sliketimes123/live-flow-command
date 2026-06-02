@@ -72,19 +72,92 @@ export function EventHealthColumn() {
       message: "Depth 12 · Decode 18ms",
       previewMessage: "Queue depth 12 · Decode 18ms",
     },
+    {
+      id: 7,
+      time: "15:17",
+      level: "Info" as const,
+      source: "Ingest",
+      message: "Keyframe received · IDR",
+      previewMessage: "Ingest keyframe received · IDR",
+    },
+    {
+      id: 8,
+      time: "15:17",
+      level: "Error" as const,
+      source: "Network",
+      message: "Timeout 3001ms · Retrying",
+      previewMessage: "Network timeout 3001ms · retrying",
+    },
+    {
+      id: 9,
+      time: "15:18",
+      level: "Info" as const,
+      source: "Control",
+      message: "Heartbeat OK",
+      previewMessage: "Control plane heartbeat OK",
+    },
+    {
+      id: 10,
+      time: "15:18",
+      level: "Warn" as const,
+      source: "CPU",
+      message: "Usage 87% · Throttle risk",
+      previewMessage: "CPU usage 87% · throttle risk",
+    },
+    {
+      id: 11,
+      time: "15:19",
+      level: "Info" as const,
+      source: "Ingest",
+      message: "Audio sync OK · AAC 48kHz",
+      previewMessage: "Ingest audio sync OK · AAC 48kHz",
+    },
+    {
+      id: 12,
+      time: "15:19",
+      level: "Error" as const,
+      source: "Bitrate",
+      message: "Drop to 890k · Buffer empty",
+      previewMessage: "Bitrate drop to 890k · buffer empty",
+    },
+    {
+      id: 13,
+      time: "15:20",
+      level: "Info" as const,
+      source: "Reconnect",
+      message: "Stable · ap-south-1",
+      previewMessage: "Reconnect stable · ap-south-1",
+    },
+    {
+      id: 14,
+      time: "15:20",
+      level: "Warn" as const,
+      source: "Memory",
+      message: "Heap 78% · GC pressure",
+      previewMessage: "Memory heap 78% · GC pressure",
+    },
+    {
+      id: 15,
+      time: "15:21",
+      level: "Info" as const,
+      source: "Ingest",
+      message: "Frame rate stable · 25fps",
+      previewMessage: "Ingest frame rate stable · 25fps",
+    },
   ];
 
   return (
     <div className="h-full min-h-0 rounded-2xl border border-border/70 bg-card p-4">
       <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
         {/* Header: icon left; metadata centered; Healthy on the right */}
-        <div className="grid w-full min-w-0 shrink-0 grid-cols-[auto_1fr_auto] items-center gap-3">
+        <div className="grid w-full min-w-0 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[14px]">
           <StreamDirectionLabel direction="in" className="justify-self-start" />
           <p
-            className="min-w-0 truncate whitespace-nowrap text-center text-[13px] font-semibold leading-snug text-muted-foreground"
+            className="min-w-0 truncate whitespace-nowrap text-center text-[13px] leading-none"
             title={inputMetadataLine}
           >
-            {inputMetadataLine}
+            <span className="font-[600] text-foreground">{inputData.inputMode}</span>
+            <span className="font-[500] text-muted-foreground/80">{` · ${inputData.dimension} · ${inputData.frameRate} FPS · ${inputData.bitrateCurrent}/${inputData.bitrateAverage}k`}</span>
           </p>
           <span className={`${statusBadgeClass} shrink-0 justify-self-end ${healthTextColor[inputData.streamHealth]}`}>
             Healthy

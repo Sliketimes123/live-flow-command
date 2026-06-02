@@ -6,6 +6,7 @@ import { EventHealthColumn } from "@/components/dashboard/EventHealthColumn";
 import { OutputHealthColumn } from "@/components/dashboard/OutputHealthColumn";
 import { RightModerationPanel } from "@/components/dashboard/RightModerationPanel";
 import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation/ChatModeration";
+import type { ComposerMessageType } from "@/components/dashboard/moderation/ModerationMessagePanel";
 import {
   buildModerationViewPath,
   DEFAULT_EVENT_ID,
@@ -89,7 +90,6 @@ const Index = () => {
       username: "TechGuru",
       message: "The production quality is outstanding!",
       timestamp: "2:36 PM",
-      isHighlighted: true,
     },
     {
       id: "4",
@@ -102,6 +102,66 @@ const Index = () => {
       username: "EventAttendee",
       message: "Looking forward to the Q&A session",
       timestamp: "2:38 PM",
+    },
+    {
+      id: "6",
+      username: "LiveWatcher",
+      message: "This is better than last year's summit!",
+      timestamp: "2:39 PM",
+    },
+    {
+      id: "7",
+      username: "CuriousCat42",
+      message: "Will the recording be available after?",
+      timestamp: "2:40 PM",
+    },
+    {
+      id: "8",
+      username: "DevDude",
+      message: "The slides are super detailed, love it!",
+      timestamp: "2:41 PM",
+    },
+    {
+      id: "9",
+      username: "MarketingPro",
+      message: "Sharing this with my whole team!",
+      timestamp: "2:42 PM",
+    },
+    {
+      id: "10",
+      username: "FirstTimer",
+      message: "First time attending this event, incredible experience!",
+      timestamp: "2:43 PM",
+    },
+    {
+      id: "11",
+      username: "SummitFan",
+      message: "The speaker lineup is absolutely top notch this year.",
+      timestamp: "2:44 PM",
+    },
+    {
+      id: "12",
+      username: "QuickQuestion",
+      message: "Is there a community Discord for this event?",
+      timestamp: "2:45 PM",
+    },
+    {
+      id: "13",
+      username: "InspiredViewer",
+      message: "Taking so many notes right now!",
+      timestamp: "2:46 PM",
+    },
+    {
+      id: "14",
+      username: "GlobalFan",
+      message: "Watching from Singapore, great stream quality!",
+      timestamp: "2:47 PM",
+    },
+    {
+      id: "15",
+      username: "TechEnthusiast",
+      message: "Could you share the resources mentioned earlier?",
+      timestamp: "2:48 PM",
     },
   ]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([
@@ -358,7 +418,7 @@ const Index = () => {
     setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== messageId));
   };
 
-  const handleSendCommentMessage = (message: string) => {
+  const handleSendCommentMessage = (message: string, messageType: ComposerMessageType = "broadcast") => {
     const moderatorMessage: ChatMessage = {
       id: `mod-${Date.now()}`,
       username: "Moderator",
@@ -369,11 +429,19 @@ const Index = () => {
       }),
       isHighlighted: false,
       isHidden: false,
-      isPinned: false,
+      isPinned: messageType === "pinned",
       isSelected: false,
     };
 
-    setMessages((prevMessages) => [...prevMessages, moderatorMessage]);
+    if (messageType === "pinned") {
+      // Replace any existing pinned message — only one active pinned at a time
+      setMessages((prev) => [
+        ...prev.map((m) => (m.isPinned ? { ...m, isPinned: false } : m)),
+        moderatorMessage,
+      ]);
+    } else {
+      setMessages((prev) => [...prev, moderatorMessage]);
+    }
   };
 
   const handleQuestionMetricsChange = (metrics: { total: number; queue: number; selected: number; closed: number }) => {

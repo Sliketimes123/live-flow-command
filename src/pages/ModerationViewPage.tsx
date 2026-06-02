@@ -41,6 +41,19 @@ const ModerationViewPage = () => {
   const [activeTab, setActiveTab] = useState<ModerationTab>(initialTab);
   const [qaQueueCount, setQaQueueCount] = useState(0);
   const [studioCount, setStudioCount] = useState(0);
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    const stored = localStorage.getItem("theme");
+    if (stored === "light") return false;
+    if (stored === "dark") return true;
+    return initialSnapshot.theme === "dark";
+  });
+
+  const handleToggleTheme = () => {
+    const next = !isDarkTheme;
+    setIsDarkTheme(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
 
   const persistSession = useCallback(
     (patch: Partial<ModerationSessionSnapshot> = {}) => {
@@ -198,6 +211,8 @@ const ModerationViewPage = () => {
         moderationTabs={moderationTabs}
         activeModerationTab={activeTab}
         onModerationTabChange={setActiveTab}
+        isDarkTheme={isDarkTheme}
+        onToggleTheme={handleToggleTheme}
       />
 
       <main className="min-h-0 flex-1 overflow-hidden">

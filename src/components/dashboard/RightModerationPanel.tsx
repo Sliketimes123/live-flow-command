@@ -458,100 +458,105 @@ export function RightModerationPanel({
           </div>
         </div>
 
-        <aside className="w-[52px] shrink-0 px-1 py-2 border-l border-border/60 bg-background">
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => onContentCollapsedChange?.(!contentCollapsed)}
-                  className={cn(
-                    "relative flex h-12 w-full items-center justify-center rounded-xl transition-colors",
-                    contentCollapsed
-                      ? "text-primary bg-primary/12 hover:bg-primary/18"
-                      : "text-muted-foreground hover:bg-muted/35 hover:text-foreground",
-                  )}
-                  aria-label={contentCollapsed ? "Expand panel" : "Collapse panel"}
-                  aria-pressed={contentCollapsed}
-                  title={contentCollapsed ? "Expand panel" : "Collapse panel"}
-                >
-                  {contentCollapsed ? (
-                    <ChevronLeft className="h-[20px] w-[20px] shrink-0" aria-hidden />
-                  ) : (
-                    <ChevronRight className="h-[20px] w-[20px] shrink-0" aria-hidden />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>{contentCollapsed ? "Expand panel" : "Collapse panel"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <div className="mx-1 my-1 h-px bg-border/60" />
-          {navItems
-            .filter((item) => (item.key === "comments" ? commentsEnabled : true))
-            .filter((item) => (item.key === "qa" ? qnaEnabled : true))
-            .map((item) => {
-              const ActiveIcon = item.icon;
-              const isActive = activePanel === item.key;
-              return (
-                <div key={item.key} className="relative">
+        <aside className="flex h-full w-[52px] shrink-0 flex-col border-l border-border/60 bg-background px-1 py-2">
+          <div className="flex flex-col">
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => handleNavSelect(item.key)}
-                    className={`relative flex h-12 w-full items-center justify-center rounded-lg transition-colors ${
-                      isActive
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/35"
-                    }`}
-                    title={item.label}
-                    aria-label={item.label}
+                    onClick={() => onContentCollapsedChange?.(!contentCollapsed)}
+                    className={cn(
+                      "relative flex h-12 w-full items-center justify-center rounded-xl transition-colors",
+                      contentCollapsed
+                        ? "text-primary bg-primary/12 hover:bg-primary/18"
+                        : "text-muted-foreground hover:bg-muted/35 hover:text-foreground",
+                    )}
+                    aria-label={contentCollapsed ? "Expand panel" : "Collapse panel"}
+                    aria-pressed={contentCollapsed}
+                    title={contentCollapsed ? "Expand panel" : "Collapse panel"}
                   >
-                    <ActiveIcon className="w-[20px] h-[20px]" />
-                    {typeof item.count === "number" && <span className={badgeClass(item.key)}>{item.count}</span>}
+                    {contentCollapsed ? (
+                      <ChevronLeft className="h-[20px] w-[20px] shrink-0" aria-hidden />
+                    ) : (
+                      <ChevronRight className="h-[20px] w-[20px] shrink-0" aria-hidden />
+                    )}
                   </button>
-                  <div className={`mx-1 my-1 h-px ${isActive ? "bg-primary/90" : "bg-border/60"}`} />
-                </div>
-              );
-            })}
-          <div className="mx-1 my-1 h-px bg-border/60" />
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={onToggleTheme}
-                  className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
-                  aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
-                  title={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
-                >
-                  {isDarkTheme ? <Sun className="w-[20px] h-[20px]" /> : <Moon className="w-[20px] h-[20px]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>{isDarkTheme ? "Light mode" : "Dark mode"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <div className="mx-1 my-1 h-px bg-border/60" />
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleToggleFullscreen}
-                  className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
-                  aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                >
-                  {isFullscreen ? <Minimize2 className="w-[20px] h-[20px]" /> : <Maximize2 className="w-[20px] h-[20px]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>{contentCollapsed ? "Expand panel" : "Collapse panel"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="mx-1 my-1 h-px bg-border/60" />
+            {navItems
+              .filter((item) => (item.key === "comments" ? commentsEnabled : true))
+              .filter((item) => (item.key === "qa" ? qnaEnabled : true))
+              .map((item) => {
+                const ActiveIcon = item.icon;
+                const isActive = activePanel === item.key;
+                return (
+                  <div key={item.key} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => handleNavSelect(item.key)}
+                      className={`relative flex h-12 w-full items-center justify-center rounded-lg transition-colors ${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                      }`}
+                      title={item.label}
+                      aria-label={item.label}
+                    >
+                      <ActiveIcon className="w-[20px] h-[20px]" />
+                      {typeof item.count === "number" && <span className={badgeClass(item.key)}>{item.count}</span>}
+                    </button>
+                    <div className={`mx-1 my-1 h-px ${isActive ? "bg-primary/90" : "bg-border/60"}`} />
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="mt-auto flex flex-col">
+            <div className="mx-1 my-1 h-px bg-border/60" />
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={onToggleTheme}
+                    className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                    aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
+                    title={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
+                  >
+                    {isDarkTheme ? <Sun className="w-[20px] h-[20px]" /> : <Moon className="w-[20px] h-[20px]" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>{isDarkTheme ? "Light mode" : "Dark mode"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="mx-1 my-1 h-px bg-border/60" />
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleToggleFullscreen}
+                    className="relative flex h-12 w-full items-center justify-center rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/35"
+                    aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                    title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  >
+                    {isFullscreen ? <Minimize2 className="w-[20px] h-[20px]" /> : <Maximize2 className="w-[20px] h-[20px]" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </aside>
       </div>
       <AlertDialog open={isResetStreamDialogOpen} onOpenChange={setIsResetStreamDialogOpen}>

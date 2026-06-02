@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -13,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,11 +48,12 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { AutoScrollIcon } from "@/components/icons/AutoScrollIcon";
 import { cn } from "@/lib/utils";
 import type { BlockedUser, ChatMessage } from "./ChatModeration";
 
 export type ModerationChatLayout = "row" | "card";
+
+export type ComposerMessageType = "broadcast" | "pinned";
 
 /** `comments` = public live chat; `studio` = internal studio chat (no hide/pin/select). */
 export type ChatChannel = "comments" | "studio";
@@ -112,7 +115,7 @@ export interface ModerationMessagePanelProps {
   composerPlaceholder: string;
   composerValue: string;
   onComposerChange: (value: string) => void;
-  onComposerSend: () => void;
+  onComposerSend: (messageType: ComposerMessageType) => void;
   composerSendDisabled: boolean;
 }
 
@@ -196,7 +199,7 @@ function ManagementMessageCard({
         <div
           className={cn(
             "flex shrink-0 items-center gap-1 opacity-0 transition-opacity",
-            "group-hover:opacity-100 group-focus-within:opacity-100",
+            "group-hover:opacity-100",
             "has-[:focus-visible]:opacity-100 has-[[data-state=open]]:opacity-100",
           )}
         >
@@ -213,7 +216,7 @@ function ManagementMessageCard({
               <MoreVertical className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuContent align="end" sideOffset={6} collisionPadding={10} className="w-44">
             {menuItems.map((item) => (
               <div key={item.key}>
                 {item.separatorBefore ? <DropdownMenuSeparator /> : null}
@@ -258,7 +261,7 @@ function BlockedUserCard({
         <div
           className={cn(
             "shrink-0 opacity-0 transition-opacity",
-            "group-hover:opacity-100 group-focus-within:opacity-100 has-[:focus-visible]:opacity-100",
+            "group-hover:opacity-100 has-[:focus-visible]:opacity-100",
           )}
         >
           <TooltipProvider delayDuration={200}>
@@ -397,7 +400,8 @@ export function ModerationMessagePanel({
   const sidebarComposerInputClass = cn(panelInputClass, "h-10 rounded-[10px] text-sm leading-none");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
-  const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
+  const [composerMessageType, setComposerMessageType] = useState<ComposerMessageType>("broadcast");
+  const [composerTypeOpen, setComposerTypeOpen] = useState(false);
   const [accordionSections, setAccordionSections] = useState({
     selected: true,
     blocked: false,
@@ -417,8 +421,8 @@ export function ModerationMessagePanel({
   }, [messagePool]);
 
   useEffect(() => {
-    onAutoScrollPauseChange?.(hoveredMessageId !== null || openActionsMenuId !== null);
-  }, [hoveredMessageId, openActionsMenuId, onAutoScrollPauseChange]);
+    onAutoScrollPauseChange?.(hoveredMessageId !== null);
+  }, [hoveredMessageId, onAutoScrollPauseChange]);
 
   const messageInteractionHandlers = (messageId: string) => ({
     onMouseEnter: () => setHoveredMessageId(messageId),
@@ -434,8 +438,8 @@ export function ModerationMessagePanel({
   const messageMetaLine = (msg: ChatMessage, blocked: boolean) => (
     <div
       className={cn(
-        "flex min-w-0 flex-wrap items-center gap-x-1.5",
-        isSidebarVariant ? "gap-y-0 leading-[1.2]" : "gap-y-0.5",
+        "flex min-w-0 items-center gap-x-1.5",
+        isSidebarVariant ? "overflow-hidden leading-[1.2]" : "flex-wrap gap-y-0.5",
       )}
     >
       {!isStudioChat && msg.isSelected && (
@@ -449,7 +453,7 @@ export function ModerationMessagePanel({
       <span
         className={cn(
           "min-w-0 truncate text-foreground",
-          isSidebarVariant ? "text-[13px] font-bold leading-tight" : "text-[12px] font-semibold leading-tight",
+          isSidebarVariant ? "text-[12.5px] font-bold leading-tight" : "text-[12px] font-semibold leading-tight",
         )}
       >
         {msg.username}
@@ -457,11 +461,20 @@ export function ModerationMessagePanel({
       <span
         className={cn(
           "shrink-0 leading-none text-muted-foreground",
-          isSidebarVariant ? "text-[11px] font-medium" : "font-mono text-[10px]",
+          isSidebarVariant ? "text-[10.5px] font-medium" : "font-mono text-[10px]",
         )}
       >
         {msg.timestamp}
       </span>
+      {!isStudioChat && msg.isPinned && (
+        <Pin
+          className={cn(
+            "shrink-0 fill-[#ef4444] text-[#ef4444]",
+            isSidebarVariant ? "h-[10px] w-[10px]" : "h-[11px] w-[11px]",
+          )}
+          aria-label="Pinned message"
+        />
+      )}
       {msg.isHighlighted && (
         <Star className={cn("shrink-0 fill-primary text-primary", isSidebarVariant ? "h-2.5 w-2.5" : "h-3 w-3")} />
       )}
@@ -487,7 +500,7 @@ export function ModerationMessagePanel({
         bodyVariant === "card"
           ? "mt-2 line-clamp-3 break-words text-[12px] leading-snug"
           : isSidebarVariant
-            ? "m-0 mb-0 line-clamp-2 break-words text-[12px] leading-[1.35] text-foreground"
+            ? "mt-[2px] line-clamp-1 group-hover:line-clamp-none break-words text-[12.5px] leading-[1.28] text-foreground/85"
             : "mt-0.5 break-words text-[12px] leading-snug",
       )}
     >
@@ -499,7 +512,7 @@ export function ModerationMessagePanel({
     <div
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-primary/10 font-semibold uppercase leading-none text-primary",
-        isSidebarVariant ? "h-[34px] w-[34px] text-[13px]" : "h-7 w-7 text-[10px]",
+        isSidebarVariant ? "h-7 w-7 text-[10px]" : "h-7 w-7 text-[10px]",
       )}
       aria-hidden
     >
@@ -538,7 +551,7 @@ export function ModerationMessagePanel({
   };
 
   const messageActionsHoverClass =
-    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-state=open]]:opacity-100";
+    "opacity-0 transition-opacity group-hover:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-state=open]]:opacity-100";
 
   const messagePinAction = (msg: ChatMessage, size: MessageActionSize = "row") => {
     const { btn, icon } = messageActionStyles(size);
@@ -551,8 +564,7 @@ export function ModerationMessagePanel({
           size="icon"
           className={cn(
             btn,
-            msg.isPinned &&
-              "bg-orange-600/15 text-orange-600 opacity-100 hover:bg-orange-600/20 hover:text-orange-600 dark:bg-orange-500/15 dark:text-orange-400 dark:hover:bg-orange-500/20 dark:hover:text-orange-300",
+            msg.isPinned && "text-[#ef4444] hover:bg-[#ef4444]/10 hover:text-[#ef4444]",
           )}
           aria-label={msg.isPinned ? "Unpin message" : "Pin message"}
           aria-pressed={msg.isPinned}
@@ -648,132 +660,75 @@ export function ModerationMessagePanel({
     );
   };
 
-  const messageOverflowMenu = (
-    msg: ChatMessage,
-    blocked: boolean,
-    size: MessageActionSize = "row",
-    options?: { includeBlock?: boolean; fullMenu?: boolean; sidebarMenu?: boolean },
-  ) => {
+  const messageCopyAction = (msg: ChatMessage, size: MessageActionSize = "row") => {
     const { btn, icon } = messageActionStyles(size);
+    const copied = copiedMessageId === msg.id;
     return (
-      <DropdownMenu
-        onOpenChange={(open) => {
-          setOpenActionsMenuId(open ? msg.id : null);
-        }}
-      >
-        <DropdownMenuTrigger asChild>
+      <Tooltip>
+        <TooltipTrigger asChild>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className={cn(btn, "data-[state=open]:bg-primary/[0.08]")}
-            aria-label="Message actions"
+            className={btn}
+            aria-label="Copy message"
+            onClick={() => onCopyMessage(msg.id, msg.message)}
           >
-            <MoreVertical className={icon} />
+            {copied ? <Check className={cn(icon, "text-primary")} /> : <Copy className={icon} />}
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          {options?.fullMenu && !isStudioChat ? (
-            <>
-              <DropdownMenuItem className="text-xs" onClick={() => onToggleHide(msg.id)}>
-                {msg.isHidden ? (
-                  <Eye className="mr-2 h-3.5 w-3.5" />
-                ) : (
-                  <EyeOff className="mr-2 h-3.5 w-3.5" />
-                )}
-                {msg.isHidden ? "Unhide" : "Hide"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => onTogglePin(msg.id)}>
-                {msg.isPinned ? (
-                  <PinOff className="mr-2 h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-                ) : (
-                  <Pin className="mr-2 h-3.5 w-3.5" />
-                )}
-                {msg.isPinned ? "Unpin" : "Pin"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => onToggleSelect(msg.id)}>
-                <Star className={cn("mr-2 h-3.5 w-3.5", msg.isSelected && "fill-primary text-primary")} />
-                {msg.isSelected ? "Unselect" : "Select"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-          {options?.sidebarMenu && !isStudioChat ? (
-            <DropdownMenuItem className="text-xs" onClick={() => onTogglePin(msg.id)}>
-              {msg.isPinned ? (
-                <PinOff className="mr-2 h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-              ) : (
-                <Pin className="mr-2 h-3.5 w-3.5" />
-              )}
-              {msg.isPinned ? "Unpin" : "Pin"}
-            </DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem className="text-xs" onClick={() => onCopyMessage(msg.id, msg.message)}>
-            {copiedMessageId === msg.id ? (
-              <Check className="mr-2 h-3.5 w-3.5 text-primary" />
-            ) : (
-              <Copy className="mr-2 h-3.5 w-3.5" />
-            )}
-            Copy
-          </DropdownMenuItem>
-          {onDeleteMessage ? (
-            <DropdownMenuItem
-              className="text-xs text-destructive focus:text-destructive"
-              onClick={() => onDeleteMessage(msg.id)}
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Delete
-            </DropdownMenuItem>
-          ) : null}
-          {!isStudioChat && (options?.includeBlock || options?.sidebarMenu) ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-xs text-destructive focus:text-destructive"
-                onClick={() => {
-                  if (blocked) {
-                    onUnblockUser?.(msg.username);
-                  } else {
-                    onBlockRequest(msg.username);
-                  }
-                }}
-              >
-                <Ban className="mr-2 h-3.5 w-3.5" />
-                {blocked ? "Unblock user" : "Block user"}
-              </DropdownMenuItem>
-            </>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{copied ? "Copied!" : "Copy"}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
-  const sidebarActionClusterVisibleClass = (msg: ChatMessage) =>
+  const messageDeleteAction = (msg: ChatMessage, size: MessageActionSize = "row") => {
+    if (!onDeleteMessage) return null;
+    const { btn, icon } = messageActionStyles(size);
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(btn, "hover:bg-destructive/10 hover:text-destructive")}
+            aria-label="Delete message"
+            onClick={() => setDeleteTargetId(msg.id)}
+          >
+            <Trash2 className={icon} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">Delete</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
+  const sidebarActionClusterVisibleClass = () =>
     cn(
       "overflow-hidden transition-[max-height,opacity] duration-150 ease-out",
       "max-h-0 opacity-0",
       "group-hover:max-h-8 group-hover:opacity-100",
-      "group-focus-within:max-h-8 group-focus-within:opacity-100",
+      "has-[:focus-visible]:max-h-8 has-[:focus-visible]:opacity-100",
       "has-[[data-state=open]]:max-h-8 has-[[data-state=open]]:opacity-100",
-      !isStudioChat && msg.isSelected && "max-h-8 opacity-100",
-      !isStudioChat && msg.isPinned && "max-h-8 opacity-100",
     );
 
   const messageSidebarActionCluster = (msg: ChatMessage, blocked: boolean) => {
     const { cluster } = messageActionStyles("sidebar");
     return (
       <TooltipProvider delayDuration={200}>
-        <div className={cn("mt-1", sidebarActionClusterVisibleClass(msg))}>
+        <div className={cn("mt-1", sidebarActionClusterVisibleClass())}>
           <div className={cluster}>
-            {isStudioChat ? (
-              messageOverflowMenu(msg, blocked, "sidebar")
-            ) : (
-              <>
-                {messageHideAction(msg, "sidebar")}
-                {messageSelectAction(msg, "sidebar")}
-                {messageOverflowMenu(msg, blocked, "sidebar", { sidebarMenu: true })}
-              </>
-            )}
+            {!isStudioChat ? messageHideAction(msg, "sidebar") : null}
+            {!isStudioChat ? messageSelectAction(msg, "sidebar") : null}
+            {!isStudioChat ? messagePinAction(msg, "sidebar") : null}
+            {!isStudioChat ? messageBlockAction(msg, blocked, "sidebar") : null}
+            {messageCopyAction(msg, "sidebar")}
+            {messageDeleteAction(msg, "sidebar")}
           </div>
         </div>
       </TooltipProvider>
@@ -788,13 +743,13 @@ export function ModerationMessagePanel({
           className="flex shrink-0 items-center self-center gap-3 pl-2"
           onMouseEnter={() => setHoveredMessageId(msg.id)}
         >
-          {!isStudioChat && msg.isPinned ? messagePinAction(msg, "row") : null}
           <div className={cn(cluster, messageActionsHoverClass)}>
             {!isStudioChat ? messageHideAction(msg, "row") : null}
-            {!isStudioChat && !msg.isPinned ? messagePinAction(msg, "row") : null}
+            {!isStudioChat ? messagePinAction(msg, "row") : null}
             {!isStudioChat ? messageSelectAction(msg, "row") : null}
             {!isStudioChat ? messageBlockAction(msg, blocked, "row") : null}
-            {messageOverflowMenu(msg, blocked, "row")}
+            {messageCopyAction(msg, "row")}
+            {messageDeleteAction(msg, "row")}
           </div>
         </div>
       </TooltipProvider>
@@ -809,14 +764,13 @@ export function ModerationMessagePanel({
           className="mt-3 flex items-center justify-end gap-3 border-t border-border/50 pt-3"
           onMouseEnter={() => setHoveredMessageId(msg.id)}
         >
-          {!isStudioChat && msg.isPinned ? messagePinAction(msg, "card") : null}
           <div className={cn(cluster, messageActionsHoverClass)}>
             {!isStudioChat ? messageHideAction(msg, "card") : null}
-            {!isStudioChat && !msg.isPinned ? messagePinAction(msg, "card") : null}
+            {!isStudioChat ? messagePinAction(msg, "card") : null}
             {!isStudioChat ? messageSelectAction(msg, "card") : null}
-            {!isStudioChat
-              ? messageOverflowMenu(msg, blocked, "card", { includeBlock: true })
-              : messageOverflowMenu(msg, blocked, "card")}
+            {!isStudioChat ? messageBlockAction(msg, blocked, "card") : null}
+            {messageCopyAction(msg, "card")}
+            {messageDeleteAction(msg, "card")}
           </div>
         </div>
       </TooltipProvider>
@@ -828,15 +782,15 @@ export function ModerationMessagePanel({
       "group box-border min-w-0 border transition-colors",
       effectiveLayout === "row" &&
         (isSidebarVariant
-          ? "w-full min-w-0 rounded-xl border-border/50 bg-card/90 px-2.5 py-2 shadow-none"
+          ? "w-full min-w-0 rounded-[10px] border-slate-400/[0.12] bg-transparent px-[10px] py-2 shadow-none"
           : "w-full rounded-md border-border/50 bg-card/90 px-3 py-2.5 shadow-sm"),
       effectiveLayout === "card" &&
         "relative h-auto w-full self-start rounded-xl border-border/50 bg-card/95 p-3 shadow-sm",
       "hover:border-border hover:bg-muted/15",
       msg.isHighlighted && "border-primary/35 bg-primary/[0.07]",
       !isStudioChat && blocked && "opacity-[0.72]",
-      !isStudioChat && msg.isPinned && "border-orange-600/40 bg-orange-600/[0.06] dark:border-orange-500/35 dark:bg-orange-500/[0.06]",
-      !isStudioChat && msg.isSelected && "border-primary/50 bg-primary/10 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)]",
+      !isStudioChat && msg.isPinned && "border-[rgba(37,99,235,0.55)] bg-[rgba(37,99,235,0.04)] hover:border-[rgba(59,130,246,0.75)] hover:bg-[rgba(37,99,235,0.07)]",
+      !isStudioChat && msg.isSelected && !isSidebarVariant && "border-primary/50 bg-primary/10 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)]",
     );
 
   const renderSidebarMessage = (msg: ChatMessage) => {
@@ -847,10 +801,14 @@ export function ModerationMessagePanel({
         className={messageShellClass(msg, blocked)}
         {...messageInteractionHandlers(msg.id)}
       >
-        <div className="flex w-full min-w-0 items-start gap-2 box-border">
+        <div className="grid w-full min-w-0 grid-cols-[28px_minmax(0,1fr)] gap-[10px]">
           {avatarEl(msg.username)}
-          <div className="min-w-0 flex-1">
-            <div className="mb-0.5">{messageMetaLine(msg, blocked)}</div>
+          <div className="min-w-0">
+            <div className="mb-[2px] flex min-w-0 items-center gap-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                {messageMetaLine(msg, blocked)}
+              </div>
+            </div>
             {messageBody(msg)}
             {messageSidebarActionCluster(msg, blocked)}
           </div>
@@ -901,7 +859,7 @@ export function ModerationMessagePanel({
     );
   };
 
-  const sidebarFeedClass = "flex w-full min-w-0 flex-col gap-2 pb-0";
+  const sidebarFeedClass = "flex w-full min-w-0 flex-col gap-[5px] pb-0";
 
   const feedClass = cn(
     "min-w-0 w-full pb-0.5",
@@ -947,9 +905,9 @@ export function ModerationMessagePanel({
 
   const copyIcon = (messageId: string) =>
     copiedMessageId === messageId ? (
-      <Check className="mr-2 h-3.5 w-3.5 text-primary" />
+      <Check className="h-3.5 w-3.5 text-primary" />
     ) : (
-      <Copy className="mr-2 h-3.5 w-3.5" />
+      <Copy className="h-3.5 w-3.5" />
     );
 
   const selectedChatCards = selectedList.map((msg) => {
@@ -1022,7 +980,7 @@ export function ModerationMessagePanel({
                 {
                   key: "delete",
                   label: "Delete",
-                  icon: <Trash2 className="mr-2 h-3.5 w-3.5" />,
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
                   onClick: () => setDeleteTargetId(msg.id),
                   destructive: true,
                   separatorBefore: true,
@@ -1083,7 +1041,7 @@ export function ModerationMessagePanel({
               {
                 key: "delete",
                 label: "Delete",
-                icon: <Trash2 className="mr-2 h-3.5 w-3.5" />,
+                icon: <Trash2 className="h-3.5 w-3.5" />,
                 onClick: () => setDeleteTargetId(msg.id),
                 destructive: true,
                 separatorBefore: true,
@@ -1176,7 +1134,7 @@ export function ModerationMessagePanel({
       className={cn(
         "flex shrink-0 overflow-visible",
         isSidebarVariant
-          ? "mb-2.5 flex-row items-center gap-2 pt-0"
+          ? "mb-2.5 flex-row items-center gap-2 pt-2"
           : "mb-2 flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:gap-2.5",
       )}
     >
@@ -1201,36 +1159,6 @@ export function ModerationMessagePanel({
               {layoutBtn("row", <List className="h-3.5 w-3.5" />, "Row view")}
             </div>
           ) : null}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "flex shrink-0 items-center justify-center rounded-[10px] border transition-colors",
-                  "h-9 w-9",
-                  autoScroll
-                    ? "border-primary/45 bg-[rgba(37,99,235,0.12)] text-[#3b82f6]"
-                    : "border-border/60 bg-transparent text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground",
-                )}
-                aria-label="Auto scroll"
-                aria-pressed={autoScroll}
-                onClick={() => {
-                  const next = !autoScroll;
-                  onAutoScrollChange(next);
-                  if (next) {
-                    setTimeout(() => requestScrollToBottom(), 80);
-                  }
-                }}
-              >
-                <AutoScrollIcon />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p className="text-xs">
-                {autoScroll ? "Auto scroll enabled" : "Enable auto scroll"}
-              </p>
-            </TooltipContent>
-          </Tooltip>
         </TooltipProvider>
         {!hasManagementData && !isStudioChat && onToggleShowHidden ? (
           <Button
@@ -1250,6 +1178,12 @@ export function ModerationMessagePanel({
     </div>
   );
 
+  const ComposerIcon = composerMessageType === "pinned" ? Pin : Megaphone;
+  const effectiveComposerPlaceholder =
+    !isStudioChat && composerMessageType === "pinned"
+      ? "Send pinned message to live chat..."
+      : composerPlaceholder;
+
   const chatComposer = (
     <div
       className={cn(
@@ -1258,23 +1192,103 @@ export function ModerationMessagePanel({
       )}
     >
       <div className="relative min-w-0 flex-1 overflow-visible px-0.5">
-        <Megaphone className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        {!isStudioChat ? (
+          <DropdownMenu open={composerTypeOpen} onOpenChange={setComposerTypeOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "absolute left-1.5 top-1/2 z-[1] -translate-y-1/2",
+                  "flex items-center gap-[2px] rounded-md px-1.5 py-1",
+                  "transition-colors hover:bg-muted/60",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                  composerMessageType === "pinned"
+                    ? "text-orange-500 dark:text-orange-400"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                aria-label="Select message type"
+                aria-haspopup="menu"
+                aria-expanded={composerTypeOpen}
+              >
+                <ComposerIcon className="h-3.5 w-3.5 shrink-0" />
+                <ChevronDown
+                  className={cn(
+                    "h-[9px] w-[9px] shrink-0 transition-transform duration-150",
+                    composerTypeOpen && "rotate-180",
+                  )}
+                />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              collisionPadding={10}
+              className="w-[220px]"
+            >
+              <DropdownMenuPrimitive.Item
+                className={cn(
+                  "flex cursor-pointer select-none items-start gap-[10px] rounded-[10px] px-3 py-[10px] outline-none transition-colors",
+                  "hover:bg-accent focus:bg-accent",
+                  composerMessageType === "broadcast" && "bg-accent/50",
+                )}
+                onSelect={() => setComposerMessageType("broadcast")}
+              >
+                <Megaphone className="mt-[1px] h-[13px] w-[13px] shrink-0 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-[700] leading-none text-foreground">Broadcast Message</span>
+                    {composerMessageType === "broadcast" && <Check className="h-3 w-3 shrink-0 text-primary" />}
+                  </div>
+                  <span className="text-[11px] leading-[1.3] text-muted-foreground">
+                    Send this message to all viewers
+                  </span>
+                </div>
+              </DropdownMenuPrimitive.Item>
+              <DropdownMenuPrimitive.Item
+                className={cn(
+                  "flex cursor-pointer select-none items-start gap-[10px] rounded-[10px] px-3 py-[10px] outline-none transition-colors",
+                  "hover:bg-accent focus:bg-accent",
+                  composerMessageType === "pinned" && "bg-accent/50",
+                )}
+                onSelect={() => setComposerMessageType("pinned")}
+              >
+                <Pin className="mt-[1px] h-[13px] w-[13px] shrink-0 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-[700] leading-none text-foreground">Pinned Message</span>
+                    {composerMessageType === "pinned" && <Check className="h-3 w-3 shrink-0 text-primary" />}
+                  </div>
+                  <span className="text-[11px] leading-[1.3] text-muted-foreground">
+                    Pin this message to the top of chat
+                  </span>
+                </div>
+              </DropdownMenuPrimitive.Item>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Megaphone className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        )}
         <Input
-          placeholder={composerPlaceholder}
+          placeholder={effectiveComposerPlaceholder}
           value={composerValue}
           onChange={(e) => onComposerChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              onComposerSend();
+              onComposerSend(composerMessageType);
             }
           }}
-          className={cn(sidebarComposerInputClass, "min-w-0 pl-9 pr-2.5")}
+          className={cn(
+            sidebarComposerInputClass,
+            "min-w-0 pr-2.5",
+            isStudioChat ? "pl-9" : "pl-[44px]",
+          )}
         />
       </div>
       <Button
         size="sm"
-        onClick={onComposerSend}
+        onClick={() => onComposerSend(composerMessageType)}
         disabled={composerSendDisabled}
         className={cn(
           "shrink-0 rounded-md p-0 shadow-sm",
@@ -1325,20 +1339,32 @@ export function ModerationMessagePanel({
     </div>
   );
 
-  const showChatMessagesHeading = hasManagementData || isSidebarVariant;
-
-  const chatMessagesHeading = showChatMessagesHeading ? (
+  const chatMessagesHeading = (
     <div
       className={cn(
-        "shrink-0 border-b border-border/40",
-        isSidebarVariant ? "mb-1 pb-1" : "mb-2 pb-1.5",
+        "flex shrink-0 items-center justify-between gap-3 border-b border-border/40",
+        isSidebarVariant ? "mb-1 pb-1 pr-2" : "mb-2 pb-1.5",
       )}
     >
-      <h3 className="text-[11px] font-bold tracking-wide text-foreground">
-        Chat Messages · {messages.length}
+      <h3 className="text-[11px] font-bold tracking-wide text-foreground whitespace-nowrap">
+        {isStudioChat ? "Studio Chat" : "Chat"} Messages · {messages.length}
       </h3>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span className="whitespace-nowrap text-[11px] font-[600] text-muted-foreground">
+          Auto Scroll
+        </span>
+        <Switch
+          checked={autoScroll}
+          onCheckedChange={(checked) => {
+            onAutoScrollChange(checked);
+            if (checked) setTimeout(() => requestScrollToBottom(), 80);
+          }}
+          aria-label="Auto Scroll"
+          className="h-5 w-9 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600 [&_span]:h-4 [&_span]:w-4 [&_span]:bg-white"
+        />
+      </div>
     </div>
-  ) : null;
+  );
 
   const moderationChatPanel = showManagementColumn ? (
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-1 md:items-stretch">

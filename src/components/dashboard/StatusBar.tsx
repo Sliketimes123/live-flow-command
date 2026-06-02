@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowUpFromLine, Cpu, Ban, Star, Trash2, Search, MessageSquare, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
+import { Cpu, Ban, Star, Trash2, Search, MessageSquare, Share2, MoreVertical, ExternalLink, Pencil, X, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -207,7 +207,6 @@ export function StatusBar({
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
               <div className="inline-flex cursor-default items-center gap-1.5">
-                <ArrowDownToLine className="h-3.5 w-3.5 shrink-0 text-[#3b82f6]" aria-hidden />
                 <span className="text-xs font-semibold text-[#3b82f6]">IN</span>
                 <StreamHealthDot health={inputData.streamHealth} />
               </div>
@@ -225,7 +224,6 @@ export function StatusBar({
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
               <div className="inline-flex cursor-default items-center gap-1.5">
-                <ArrowUpFromLine className="h-3.5 w-3.5 shrink-0 text-[#22c55e]" aria-hidden />
                 <span className="text-xs font-semibold text-[#22c55e]">OUT</span>
                 <StreamHealthDot health={outputData.streamHealth} />
               </div>

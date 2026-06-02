@@ -250,20 +250,24 @@ All colors MUST be HSL.
 
 /* Ensure vertical scrollbar stays visible in logs viewport */
 .force-vertical-scrollbar {
-  scrollbar-width: auto;
+  scrollbar-width: thin;
 }
 
 .force-vertical-scrollbar::-webkit-scrollbar:vertical {
-  width: 10px;
+  width: 4px;
 }
 
 .force-vertical-scrollbar::-webkit-scrollbar-track:vertical {
-  background: hsl(var(--muted) / 0.45);
+  background: transparent;
 }
 
 .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical {
-  background: hsl(var(--border));
+  background: rgba(148, 163, 184, 0.22);
   border-radius: 9999px;
+}
+
+.force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical:hover {
+  background: rgba(148, 163, 184, 0.38);
 }
 
 /* Firefox */
@@ -272,7 +276,7 @@ All colors MUST be HSL.
 }
 
 .force-vertical-scrollbar {
-  scrollbar-color: hsl(var(--border)) hsl(var(--muted) / 0.45);
+  scrollbar-color: rgba(148, 163, 184, 0.22) transparent;
 }
 
 /* Dark mode: deeper track + softer thumb (avoids light OS default scrollbar) */
@@ -297,19 +301,19 @@ All colors MUST be HSL.
 }
 
 .dark .force-vertical-scrollbar {
-  scrollbar-color: hsl(225 14% 30%) hsl(var(--muted) / 0.7);
+  scrollbar-color: rgba(148, 163, 184, 0.22) transparent;
 }
 
 .dark .force-vertical-scrollbar::-webkit-scrollbar-track:vertical {
-  background: hsl(var(--muted) / 0.7);
+  background: transparent;
 }
 
 .dark .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical {
-  background: hsl(225 14% 30%);
+  background: rgba(148, 163, 184, 0.22);
 }
 
 .dark .force-vertical-scrollbar::-webkit-scrollbar-thumb:vertical:hover {
-  background: hsl(var(--primary) / 0.55);
+  background: rgba(148, 163, 184, 0.38);
 }
 
 /* Right sidebar chat: always-visible scrollbar when list overflows */

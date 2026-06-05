@@ -169,7 +169,6 @@ function EmptyState({ message }: { message: string }) {
 
 export function LiveLogTable({
   title,
-  direction,
   logs,
   /** Expanded view: prefer `max-h-[...]` so the block grows with few rows and scrolls when full. */
   tableHeight = "max-h-[min(75vh,22rem)]",

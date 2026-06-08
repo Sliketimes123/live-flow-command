@@ -85,6 +85,7 @@ export function ModerationWorkspace({
             <QAPanel
               variant="moderation"
               onBlockUser={onBlockUser}
+              onUnblockUser={onUnblockUser}
               blockedUsers={blockedUsers}
               onQuestionMetricsChange={(metrics) => {
                 onQaQueueCountChange?.(metrics.queue);

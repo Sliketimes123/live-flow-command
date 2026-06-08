@@ -101,6 +101,7 @@ export function EventModerationPanel({
             <QAPanel
               variant="moderation"
               onBlockUser={onBlockUser}
+              onUnblockUser={onUnblockUser}
               blockedUsers={blockedUsers}
               onQuestionMetricsChange={(metrics) => {
                 setQaQueueCount(metrics.queue);

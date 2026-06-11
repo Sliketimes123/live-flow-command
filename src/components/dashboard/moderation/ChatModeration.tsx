@@ -15,9 +15,11 @@ import { cn } from "@/lib/utils";
 import {
   ModerationMessagePanel,
   type ChatPanelVariant,
-  type ModerationChatLayout,
   type ComposerMessageType,
+  type StudioUser,
+  type StudioChatTarget,
 } from "./ModerationMessagePanel";
+import { useModerationStore } from "@/contexts/ModerationStoreContext";
 
 export interface ChatMessage {
   id: string;
@@ -77,8 +79,6 @@ export function ChatModeration({
   // Default to disabled (false)
   const [internalAutoScroll, setInternalAutoScroll] = useState(false);
   const [internalStudioAutoScroll, setInternalStudioAutoScroll] = useState(false);
-  const [commentChatLayout, setCommentChatLayout] = useState<ModerationChatLayout>("row");
-  const [studioChatLayout, setStudioChatLayout] = useState<ModerationChatLayout>("row");
   const [commentsAutoScrollPaused, setCommentsAutoScrollPaused] = useState(false);
   const [studioAutoScrollPaused, setStudioAutoScrollPaused] = useState(false);
 
@@ -116,6 +116,8 @@ export function ChatModeration({
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [newCommentMessage, setNewCommentMessage] = useState("");
   const [newStudioMessage, setNewStudioMessage] = useState("");
+  const [activeStudioTarget, setActiveStudioTarget] = useState<StudioChatTarget>({ type: "broadcast" });
+  const [privateStudioMessages, setPrivateStudioMessages] = useState<Record<string, ChatMessage[]>>({});
   const [isConfirmBlockOpen, setIsConfirmBlockOpen] = useState(false);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState<string | null>(null);
   const commentsScrollRef = useRef<HTMLDivElement>(null);
@@ -132,29 +134,8 @@ export function ChatModeration({
     scrollEl.scrollTop = scrollEl.scrollHeight;
   };
 
-  // Separate state for Studio Chat messages
-  const [studioMessages, setStudioMessages] = useState<ChatMessage[]>([
-    {
-      id: "studio-1",
-      username: "StudioUser1",
-      message: "Welcome to the studio chat!",
-      timestamp: "2:40 PM",
-      isHighlighted: false,
-      isHidden: false,
-      isPinned: false,
-      isSelected: false,
-    },
-    {
-      id: "studio-2",
-      username: "StudioUser2",
-      message: "This is a separate studio chat channel.",
-      timestamp: "2:41 PM",
-      isHighlighted: false,
-      isHidden: false,
-      isPinned: false,
-      isSelected: false,
-    },
-  ]);
+  // Studio messages and users come from the shared moderation store
+  const { studioMessages, setStudioMessages, studioUsers } = useModerationStore();
 
   const isUserBlocked = (username: string) => {
     return blockedUsers.some((user) => user.username === username);
@@ -240,9 +221,13 @@ export function ChatModeration({
       });
   }, [messages, searchQuery]);
 
-  const filteredStudioMessages = useMemo(() => {
+  const activeStudioMessages = useMemo(() => {
     const query = studioSearchQuery.trim().toLowerCase();
-    return studioMessages.filter((msg) => {
+    const msgs =
+      activeStudioTarget.type === "broadcast"
+        ? studioMessages
+        : (privateStudioMessages[activeStudioTarget.userId] ?? []);
+    return msgs.filter((msg) => {
       if (!query) return true;
       return (
         msg.username.toLowerCase().includes(query) ||
@@ -250,7 +235,7 @@ export function ChatModeration({
         msg.timestamp.toLowerCase().includes(query)
       );
     });
-  }, [studioMessages, studioSearchQuery]);
+  }, [activeStudioTarget, studioMessages, privateStudioMessages, studioSearchQuery]);
 
   const handleSendCommentMessage = (messageType: ComposerMessageType = "broadcast") => {
     if (!newCommentMessage.trim()) return;
@@ -269,8 +254,8 @@ export function ChatModeration({
   const handleSendStudioMessage = () => {
     if (!newStudioMessage.trim()) return;
 
-    const moderatorMessage: ChatMessage = {
-      id: `studio-mod-${Date.now()}`,
+    const msg: ChatMessage = {
+      id: `studio-${activeStudioTarget.type === "private" ? `dm-${activeStudioTarget.userId}-` : "mod-"}${Date.now()}`,
       username: "Moderator",
       message: newStudioMessage.trim(),
       timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
@@ -280,12 +265,18 @@ export function ChatModeration({
       isSelected: false,
     };
 
-    setStudioMessages((prev) => [...prev, moderatorMessage]);
+    if (activeStudioTarget.type === "broadcast") {
+      setStudioMessages((prev) => [...prev, msg]);
+      toast({ title: "Message sent", description: "Your message was posted to studio chat" });
+    } else {
+      const userId = activeStudioTarget.userId;
+      setPrivateStudioMessages((prev) => ({
+        ...prev,
+        [userId]: [...(prev[userId] ?? []), msg],
+      }));
+      toast({ title: "Message sent", description: `Message sent to ${activeStudioTarget.username}` });
+    }
     setNewStudioMessage("");
-    toast({
-      title: "Message sent",
-      description: "Your message was posted to studio chat",
-    });
   };
 
   // Auto scroll for Comments tab - only when Comments tab is active
@@ -305,7 +296,7 @@ export function ChatModeration({
 
   // Auto scroll for Studio Chat tab - only when Studio Chat tab is active
   useEffect(() => {
-    if (activeTab === "studio" && studioAutoScrollActive && filteredStudioMessages.length > 0) {
+    if (activeTab === "studio" && studioAutoScrollActive && activeStudioMessages.length > 0) {
       // Use requestAnimationFrame for better timing
       requestAnimationFrame(() => {
         setTimeout(() => {
@@ -316,7 +307,7 @@ export function ChatModeration({
         }, 50);
       });
     }
-  }, [filteredStudioMessages.length, studioAutoScrollActive, activeTab]);
+  }, [activeStudioMessages.length, studioAutoScrollActive, activeTab]);
 
   // Scroll to bottom when switching to Comments tab if auto-scroll is enabled
   useEffect(() => {
@@ -332,10 +323,10 @@ export function ChatModeration({
   useEffect(() => {
     const prevTab = prevActiveTabRef.current;
 
-    if (activeTab === "studio" && prevTab !== "studio" && studioAutoScrollActive && filteredStudioMessages.length > 0) {
+    if (activeTab === "studio" && prevTab !== "studio" && studioAutoScrollActive && activeStudioMessages.length > 0) {
       setTimeout(() => scrollToBottom(studioScrollRef), 100);
     }
-  }, [activeTab, studioAutoScrollActive, filteredStudioMessages.length]);
+  }, [activeTab, studioAutoScrollActive, activeStudioMessages.length]);
 
   useEffect(() => {
     if (!onMessageCountChange) return;
@@ -361,8 +352,6 @@ export function ChatModeration({
       blockedUsers={blockedUsers}
       allMessages={messages}
       onUnblockUser={onUnblockUser}
-      layout={variant === "sidebar" ? "row" : commentChatLayout}
-      onLayoutChange={setCommentChatLayout}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       autoScroll={autoScroll}
@@ -386,14 +375,23 @@ export function ChatModeration({
     />
   );
 
+  const handleStudioSelectUser = (userId: string, username: string) => {
+    const user = studioUsers.find((u) => u.id === userId);
+    setActiveStudioTarget({
+      type: "private",
+      userId,
+      username,
+      role: user?.role,
+      status: user?.status,
+    });
+  };
+
   // Studio Chat Tab Content
   const renderStudioChatContent = () => (
     <ModerationMessagePanel
       variant={variant}
       chatChannel="studio"
-      messages={filteredStudioMessages}
-      layout={variant === "sidebar" ? "row" : studioChatLayout}
-      onLayoutChange={setStudioChatLayout}
+      messages={activeStudioMessages}
       searchQuery={studioSearchQuery}
       onSearchChange={setStudioSearchQuery}
       autoScroll={studioAutoScroll}
@@ -407,11 +405,19 @@ export function ChatModeration({
       onToggleSelect={() => {}}
       onCopyMessage={handleCopy}
       onDeleteMessage={handleStudioDeleteMessage}
-      composerPlaceholder="Send internal studio message..."
+      composerPlaceholder={
+        activeStudioTarget.type === "broadcast"
+          ? "Send internal studio message..."
+          : `Message ${activeStudioTarget.username} privately...`
+      }
       composerValue={newStudioMessage}
       onComposerChange={setNewStudioMessage}
       onComposerSend={handleSendStudioMessage}
       composerSendDisabled={!newStudioMessage.trim()}
+      studioUsers={studioUsers}
+      studioActiveTarget={activeStudioTarget}
+      onStudioSelectBroadcast={() => setActiveStudioTarget({ type: "broadcast" })}
+      onStudioSelectUser={handleStudioSelectUser}
     />
   );
 

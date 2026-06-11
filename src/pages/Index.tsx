@@ -5,7 +5,6 @@ import { StatusBar } from "@/components/dashboard/StatusBar";
 import { EventHealthColumn } from "@/components/dashboard/EventHealthColumn";
 import { OutputHealthColumn } from "@/components/dashboard/OutputHealthColumn";
 import { RightModerationPanel } from "@/components/dashboard/RightModerationPanel";
-import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation/ChatModeration";
 import type { ComposerMessageType } from "@/components/dashboard/moderation/ModerationMessagePanel";
 import {
   buildModerationViewPath,
@@ -13,6 +12,7 @@ import {
   saveModerationSession,
   type ModerationTab,
 } from "@/lib/moderationSession";
+import { useModerationStore } from "@/contexts/ModerationStoreContext";
 
 type SocialDestination = {
   id: string;
@@ -59,6 +59,9 @@ const Index = () => {
   const [reactionsEnabled, setReactionsEnabled] = useState(true);
   const [qnaEnabled, setQnaEnabled] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  // Shared moderation store — single source of truth for all windows
+  const { chatMessages, setChatMessages, blockedUsers, blockUser, unblockUser } = useModerationStore();
   const [notificationFeed, setNotificationFeed] = useState<Array<{
     id: string;
     title: string;
@@ -72,105 +75,6 @@ const Index = () => {
     studio: 0,
     qa: 0,
   });
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      username: "User123",
-      message: "This is an amazing event! Thanks for hosting!",
-      timestamp: "2:34 PM",
-    },
-    {
-      id: "2",
-      username: "StreamFan99",
-      message: "Can you explain more about the topic?",
-      timestamp: "2:35 PM",
-    },
-    {
-      id: "3",
-      username: "TechGuru",
-      message: "The production quality is outstanding!",
-      timestamp: "2:36 PM",
-    },
-    {
-      id: "4",
-      username: "NewViewer",
-      message: "Just joined, what did I miss?",
-      timestamp: "2:37 PM",
-    },
-    {
-      id: "5",
-      username: "EventAttendee",
-      message: "Looking forward to the Q&A session",
-      timestamp: "2:38 PM",
-    },
-    {
-      id: "6",
-      username: "LiveWatcher",
-      message: "This is better than last year's summit!",
-      timestamp: "2:39 PM",
-    },
-    {
-      id: "7",
-      username: "CuriousCat42",
-      message: "Will the recording be available after?",
-      timestamp: "2:40 PM",
-    },
-    {
-      id: "8",
-      username: "DevDude",
-      message: "The slides are super detailed, love it!",
-      timestamp: "2:41 PM",
-    },
-    {
-      id: "9",
-      username: "MarketingPro",
-      message: "Sharing this with my whole team!",
-      timestamp: "2:42 PM",
-    },
-    {
-      id: "10",
-      username: "FirstTimer",
-      message: "First time attending this event, incredible experience!",
-      timestamp: "2:43 PM",
-    },
-    {
-      id: "11",
-      username: "SummitFan",
-      message: "The speaker lineup is absolutely top notch this year.",
-      timestamp: "2:44 PM",
-    },
-    {
-      id: "12",
-      username: "QuickQuestion",
-      message: "Is there a community Discord for this event?",
-      timestamp: "2:45 PM",
-    },
-    {
-      id: "13",
-      username: "InspiredViewer",
-      message: "Taking so many notes right now!",
-      timestamp: "2:46 PM",
-    },
-    {
-      id: "14",
-      username: "GlobalFan",
-      message: "Watching from Singapore, great stream quality!",
-      timestamp: "2:47 PM",
-    },
-    {
-      id: "15",
-      username: "TechEnthusiast",
-      message: "Could you share the resources mentioned earlier?",
-      timestamp: "2:48 PM",
-    },
-  ]);
-  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([
-    {
-      id: "1",
-      username: "User123",
-      blockedAt: "2:34 PM",
-    },
-  ]);
   const [rightPanelWidth, setRightPanelWidth] = useState(0);
   const [isRightContentCollapsed, setIsRightContentCollapsed] = useState(false);
   const [resizingSide, setResizingSide] = useState<"right" | null>(null);
@@ -320,19 +224,6 @@ const Index = () => {
     setTheme((prevTheme) => (prevTheme === "dark" ? "light" : "dark"));
   };
 
-  const playAlertSound = () => {
-    const audioContext = new window.AudioContext();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.value = 880;
-    gainNode.gain.value = 0.05;
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.12);
-  };
-
   const addNotification = (
     title: string,
     description: string,
@@ -361,22 +252,13 @@ const Index = () => {
       });
     }
 
-    playAlertSound();
   };
 
 
   const handleBlockUser = (username: string) => {
     const isAlreadyBlocked = blockedUsers.some((user) => user.username === username);
     if (!isAlreadyBlocked) {
-      const newBlockedUser: BlockedUser = {
-        id: Date.now().toString(),
-        username,
-        blockedAt: new Date().toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-      };
-      setBlockedUsers([...blockedUsers, newBlockedUser]);
+      blockUser(username);
       addNotification(
         "User blocked",
         `${username} was blocked by a moderator action.`,
@@ -387,46 +269,37 @@ const Index = () => {
   };
 
   const handleUnblockUser = (username: string) => {
-    setBlockedUsers(blockedUsers.filter((user) => user.username !== username));
+    unblockUser(username);
   };
 
   const handleToggleHide = (messageId: string) => {
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) =>
-        msg.id === messageId ? { ...msg, isHidden: !msg.isHidden } : msg
-      )
+    setChatMessages((prev) =>
+      prev.map((msg) => (msg.id === messageId ? { ...msg, isHidden: !msg.isHidden } : msg))
     );
   };
 
   const handleTogglePin = (messageId: string) => {
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) =>
-        msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
-      )
+    setChatMessages((prev) =>
+      prev.map((msg) => (msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg))
     );
   };
 
   const handleToggleSelect = (messageId: string) => {
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) =>
-        msg.id === messageId ? { ...msg, isSelected: !msg.isSelected } : msg
-      )
+    setChatMessages((prev) =>
+      prev.map((msg) => (msg.id === messageId ? { ...msg, isSelected: !msg.isSelected } : msg))
     );
   };
 
   const handleDeleteMessage = (messageId: string) => {
-    setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== messageId));
+    setChatMessages((prev) => prev.filter((msg) => msg.id !== messageId));
   };
 
   const handleSendCommentMessage = (message: string, messageType: ComposerMessageType = "broadcast") => {
-    const moderatorMessage: ChatMessage = {
+    const moderatorMessage = {
       id: `mod-${Date.now()}`,
       username: "Moderator",
       message,
-      timestamp: new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
       isHighlighted: false,
       isHidden: false,
       isPinned: messageType === "pinned",
@@ -434,13 +307,12 @@ const Index = () => {
     };
 
     if (messageType === "pinned") {
-      // Replace any existing pinned message — only one active pinned at a time
-      setMessages((prev) => [
+      setChatMessages((prev) => [
         ...prev.map((m) => (m.isPinned ? { ...m, isPinned: false } : m)),
         moderatorMessage,
       ]);
     } else {
-      setMessages((prev) => [...prev, moderatorMessage]);
+      setChatMessages((prev) => [...prev, moderatorMessage]);
     }
   };
 
@@ -484,7 +356,7 @@ const Index = () => {
       commentsEnabled,
       qnaEnabled,
       publishingHealth,
-      messages: filteredMessages,
+      messages: chatMessages,
       blockedUsers,
       notifications: notificationFeed,
       theme,
@@ -493,8 +365,7 @@ const Index = () => {
     window.open(buildModerationViewPath(EVENT_ID, activeTab), "_blank", "noopener,noreferrer");
   };
 
-  // Use all messages (no filtering needed)
-  const filteredMessages = messages;
+  const filteredMessages = chatMessages;
 
   useEffect(() => {
     if (publishingHealth === "warning" || publishingHealth === "poor") {

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ModerationWorkspace } from "@/components/dashboard/ModerationWorkspace";
-import type { ChatMessage, BlockedUser } from "@/components/dashboard/moderation/ChatModeration";
 import {
   createDefaultModerationSession,
   loadModerationSession,
@@ -10,6 +9,7 @@ import {
   type ModerationSessionSnapshot,
   type ModerationTab,
 } from "@/lib/moderationSession";
+import { useModerationStore } from "@/contexts/ModerationStoreContext";
 
 function parseTab(value: string | null): ModerationTab | undefined {
   if (value === "comments" || value === "qa" || value === "studio") {
@@ -34,8 +34,8 @@ const ModerationViewPage = () => {
     ...initialSnapshot,
     activeTab: initialTab,
   }));
-  const [messages, setMessages] = useState<ChatMessage[]>(initialSnapshot.messages);
-  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>(initialSnapshot.blockedUsers);
+  // messages and blockedUsers come from the shared store — synced with the Admin Page
+  const { chatMessages: messages, setChatMessages, blockedUsers, blockUser, unblockUser } = useModerationStore();
   const [notifications, setNotifications] = useState(initialSnapshot.notifications);
   const [elapsedTime, setElapsedTime] = useState(initialSnapshot.elapsedTime);
   const [activeTab, setActiveTab] = useState<ModerationTab>(initialTab);
@@ -68,7 +68,8 @@ const ModerationViewPage = () => {
       setSession(next);
       saveModerationSession(next);
     },
-    [session, messages, blockedUsers, notifications, elapsedTime]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session, notifications, elapsedTime]
   );
 
   useEffect(() => {
@@ -104,59 +105,43 @@ const ModerationViewPage = () => {
   }, [messages, blockedUsers, notifications, elapsedTime]);
 
   const handleBlockUser = (username: string) => {
-    const isAlreadyBlocked = blockedUsers.some((user) => user.username === username);
-    if (!isAlreadyBlocked) {
-      setBlockedUsers([
-        ...blockedUsers,
-        {
-          id: Date.now().toString(),
-          username,
-          blockedAt: new Date().toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-        },
-      ]);
-    }
+    blockUser(username);
   };
 
   const handleUnblockUser = (username: string) => {
-    setBlockedUsers(blockedUsers.filter((user) => user.username !== username));
+    unblockUser(username);
   };
 
   const handleToggleHide = (messageId: string) => {
-    setMessages((prev) =>
+    setChatMessages((prev) =>
       prev.map((msg) => (msg.id === messageId ? { ...msg, isHidden: !msg.isHidden } : msg))
     );
   };
 
   const handleTogglePin = (messageId: string) => {
-    setMessages((prev) =>
+    setChatMessages((prev) =>
       prev.map((msg) => (msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg))
     );
   };
 
   const handleToggleSelect = (messageId: string) => {
-    setMessages((prev) =>
+    setChatMessages((prev) =>
       prev.map((msg) => (msg.id === messageId ? { ...msg, isSelected: !msg.isSelected } : msg))
     );
   };
 
   const handleDeleteMessage = (messageId: string) => {
-    setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    setChatMessages((prev) => prev.filter((msg) => msg.id !== messageId));
   };
 
   const handleSendCommentMessage = (message: string) => {
-    setMessages((prev) => [
+    setChatMessages((prev) => [
       ...prev,
       {
         id: `mod-${Date.now()}`,
         username: "Moderator",
         message,
-        timestamp: new Date().toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
         isHighlighted: false,
         isHidden: false,
         isPinned: false,

@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -31,14 +30,14 @@ import {
   Check,
   Trash2,
   ArrowRight,
+  ArrowLeft,
   Ban,
   Pin,
   PinOff,
-  Grid3x3,
-  List,
   MoreVertical,
   Megaphone,
   ChevronDown,
+  Users,
 } from "lucide-react";
 import {
   useEffect,
@@ -54,6 +53,21 @@ import type { BlockedUser, ChatMessage } from "./ChatModeration";
 export type ModerationChatLayout = "row" | "card";
 
 export type ComposerMessageType = "broadcast" | "pinned";
+
+export type StudioChatTarget =
+  | { type: "broadcast" }
+  | { type: "private"; userId: string; username: string; role?: string; status?: string };
+
+export type StudioUserRole = "Host" | "Co-host" | "Moderator" | "Participant" | "Audience";
+export type StudioUserStatus = "Online" | "Offline" | "Speaking" | "Muted" | "In Queue" | "Live";
+
+export interface StudioUser {
+  id: string;
+  username: string;
+  role: StudioUserRole;
+  status: StudioUserStatus;
+  lastActive?: string;
+}
 
 /** `comments` = public live chat; `studio` = internal studio chat (no hide/pin/select). */
 export type ChatChannel = "comments" | "studio";
@@ -83,8 +97,6 @@ export interface ModerationMessagePanelProps {
   variant?: ChatPanelVariant;
   chatChannel?: ChatChannel;
   messages: ChatMessage[];
-  layout: ModerationChatLayout;
-  onLayoutChange: (layout: ModerationChatLayout) => void;
   searchQuery: string;
   onSearchChange: (value: string) => void;
   showHidden?: boolean;
@@ -117,6 +129,12 @@ export interface ModerationMessagePanelProps {
   onComposerChange: (value: string) => void;
   onComposerSend: (messageType: ComposerMessageType) => void;
   composerSendDisabled: boolean;
+  /** Studio users list shown in the LHS sidebar when chatChannel === "studio" */
+  studioUsers?: StudioUser[];
+  /** Active studio chat target — broadcast or 1:1 with a user */
+  studioActiveTarget?: StudioChatTarget;
+  onStudioSelectBroadcast?: () => void;
+  onStudioSelectUser?: (userId: string, username: string) => void;
 }
 
 const managementItemCardClass =
@@ -292,6 +310,124 @@ function BlockedUserCard({
   );
 }
 
+const studioRoleClass: Record<StudioUserRole, string> = {
+  Host: "border-purple-200/70 bg-purple-50 text-purple-700 dark:border-purple-800/40 dark:bg-purple-900/20 dark:text-purple-300",
+  "Co-host": "border-blue-200/70 bg-blue-50 text-blue-700 dark:border-blue-800/40 dark:bg-blue-900/20 dark:text-blue-300",
+  Moderator: "border-sky-200/70 bg-sky-50 text-sky-700 dark:border-sky-800/40 dark:bg-sky-900/20 dark:text-sky-300",
+  Participant: "border-slate-200/70 bg-slate-50 text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/30 dark:text-slate-400",
+  Audience: "border-slate-200/50 bg-slate-50/60 text-slate-500 dark:border-slate-700/30 dark:bg-slate-800/20 dark:text-slate-500",
+};
+
+const studioStatusConfig: Record<StudioUserStatus, { dot: string; bg: string; text: string }> = {
+  Online: { dot: "bg-green-500", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-400" },
+  Offline: { dot: "bg-slate-400", bg: "bg-slate-100 dark:bg-slate-800/40", text: "text-slate-500 dark:text-slate-400" },
+  Speaking: { dot: "bg-blue-500", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-400" },
+  Muted: { dot: "bg-amber-500", bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400" },
+  "In Queue": { dot: "bg-indigo-500", bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-700 dark:text-indigo-400" },
+  Live: { dot: "bg-red-500", bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-400" },
+};
+
+function StudioUsersSidebar({
+  users,
+  activeTarget,
+  onSelectBroadcast,
+  onSelectUser,
+}: {
+  users: StudioUser[];
+  activeTarget?: StudioChatTarget;
+  onSelectBroadcast?: () => void;
+  onSelectUser?: (userId: string, username: string) => void;
+}) {
+  const isBroadcastActive = !activeTarget || activeTarget.type === "broadcast";
+
+  return (
+    <aside className={managementPanelClass}>
+      {/* Panel header */}
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-3.5">
+        <span className="flex-1 truncate text-[11px] font-bold tracking-wide text-foreground">Studio Users</span>
+        <span className={accordionCountBadgeClass}>{users.length}</span>
+      </div>
+
+      {/* All Studio Chat / Broadcast row */}
+      <button
+        type="button"
+        onClick={onSelectBroadcast}
+        className={cn(
+          "flex w-full min-w-0 cursor-pointer items-center gap-3 border-l-2 px-3 py-2.5 text-left transition-colors",
+          isBroadcastActive
+            ? "border-primary bg-primary/[0.07] dark:bg-primary/10"
+            : "border-transparent hover:bg-muted/40",
+        )}
+      >
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+          isBroadcastActive ? "bg-primary/15 text-primary" : "bg-muted/60 text-muted-foreground",
+        )}>
+          <Users className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p className="truncate text-[13px] font-semibold leading-snug text-foreground">All Studio Chat</p>
+          <p className="truncate text-[11px] text-muted-foreground">Broadcast to all</p>
+        </div>
+        {isBroadcastActive && (
+          <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">Active</span>
+        )}
+      </button>
+
+      {/* Divider */}
+      <div className="border-b border-border/30" />
+
+      {/* Scrollable user list */}
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar py-1">
+        {users.length > 0 ? (
+          <div className="flex flex-col">
+            {users.map((user) => {
+              const isActive = activeTarget?.type === "private" && activeTarget.userId === user.id;
+              const st = studioStatusConfig[user.status];
+              const meta = [user.role, user.lastActive].filter(Boolean).join(" • ");
+              return (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => onSelectUser?.(user.id, user.username)}
+                  className={cn(
+                    "flex w-full min-w-0 cursor-pointer items-center gap-3 border-l-2 px-3 py-2.5 text-left transition-colors",
+                    isActive
+                      ? "border-primary bg-primary/[0.07] dark:bg-primary/10"
+                      : "border-transparent hover:bg-muted/40",
+                  )}
+                >
+                  {/* Avatar */}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/60 text-[12px] font-bold text-muted-foreground">
+                    {chatUserInitials(user.username)}
+                  </div>
+
+                  {/* Name + role/active meta */}
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="truncate text-[13px] font-semibold leading-snug text-foreground">{user.username}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{meta}</p>
+                  </div>
+
+                  {/* Status badge */}
+                  <div className={cn("flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5", st.bg)}>
+                    <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", st.dot)} />
+                    <span className={cn("text-[11px] font-semibold leading-none", st.text)}>{user.status}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <ManagementEmptyState
+            title="No studio users"
+            description="Studio participants will appear here once they join."
+          />
+        )}
+      </div>
+    </aside>
+  );
+}
+
 function ManagementAccordionSection({
   title,
   count,
@@ -337,9 +473,9 @@ function ManagementAccordionSection({
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t border-border/40 p-2.5">
-            <ScrollArea className={cn("overflow-hidden pr-1", maxHeightClass)}>
+            <div className={cn("w-full overflow-x-hidden overflow-y-auto custom-scrollbar pr-1", maxHeightClass)}>
               <div className="flex flex-col gap-2">{children}</div>
-            </ScrollArea>
+            </div>
           </div>
         </CollapsibleContent>
       </div>
@@ -353,8 +489,6 @@ export function ModerationMessagePanel({
   variant = "sidebar",
   chatChannel = "comments",
   messages,
-  layout,
-  onLayoutChange,
   searchQuery,
   onSearchChange,
   showHidden,
@@ -382,11 +516,14 @@ export function ModerationMessagePanel({
   onComposerChange,
   onComposerSend,
   composerSendDisabled,
+  studioUsers,
+  studioActiveTarget,
+  onStudioSelectBroadcast,
+  onStudioSelectUser,
 }: ModerationMessagePanelProps) {
   const isModerationVariant = variant === "moderation";
   const isSidebarVariant = variant === "sidebar";
-  /** Sidebar width is too narrow for card/grid layouts — always use compact rows. */
-  const effectiveLayout: ModerationChatLayout = isSidebarVariant ? "row" : layout;
+  const effectiveLayout: ModerationChatLayout = "row";
   const isStudioChat = chatChannel === "studio";
   const isUserBlockedForChannel = (username: string) =>
     !isStudioChat && isUserBlocked(username);
@@ -543,10 +680,12 @@ export function ModerationMessagePanel({
     return {
       btn: cn(
         messageActionBaseBtnClass,
-        isModerationVariant ? "h-10 w-10 min-h-10 min-w-10" : "h-9 w-9 min-h-9 min-w-9",
+        isModerationVariant ? "h-7 w-7 min-h-7 min-w-7 rounded-[7px]" : "h-9 w-9 min-h-9 min-w-9",
       ),
-      icon: isModerationVariant ? "h-5 w-5 shrink-0" : "h-[18px] w-[18px] shrink-0",
-      cluster: "flex shrink-0 items-center gap-3 pr-3",
+      icon: isModerationVariant ? "h-[15px] w-[15px] shrink-0" : "h-[18px] w-[18px] shrink-0",
+      cluster: isModerationVariant
+        ? "flex shrink-0 items-center gap-1.5"
+        : "flex shrink-0 items-center gap-3 pr-3",
     };
   };
 
@@ -740,17 +879,15 @@ export function ModerationMessagePanel({
     return (
       <TooltipProvider delayDuration={200}>
         <div
-          className="flex shrink-0 items-center self-center gap-3 pl-2"
+          className={cn(cluster, messageActionsHoverClass)}
           onMouseEnter={() => setHoveredMessageId(msg.id)}
         >
-          <div className={cn(cluster, messageActionsHoverClass)}>
-            {!isStudioChat ? messageHideAction(msg, "row") : null}
-            {!isStudioChat ? messagePinAction(msg, "row") : null}
-            {!isStudioChat ? messageSelectAction(msg, "row") : null}
-            {!isStudioChat ? messageBlockAction(msg, blocked, "row") : null}
-            {messageCopyAction(msg, "row")}
-            {messageDeleteAction(msg, "row")}
-          </div>
+          {!isStudioChat ? messagePinAction(msg, "row") : null}
+          {!isStudioChat ? messageSelectAction(msg, "row") : null}
+          {messageCopyAction(msg, "row")}
+          {!isStudioChat ? messageHideAction(msg, "row") : null}
+          {!isStudioChat ? messageBlockAction(msg, blocked, "row") : null}
+          {messageDeleteAction(msg, "row")}
         </div>
       </TooltipProvider>
     );
@@ -847,13 +984,15 @@ export function ModerationMessagePanel({
         className={messageShellClass(msg, blocked)}
         {...messageInteractionHandlers(msg.id)}
       >
-        <div className="flex w-full min-w-0 items-center gap-2.5 box-border">
+        <div className="flex w-full min-w-0 items-start gap-2.5 box-border">
           {avatarEl(msg.username)}
           <div className="min-w-0 flex-1">
-            {messageMetaLine(msg, blocked)}
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">{messageMetaLine(msg, blocked)}</div>
+              {messageRowActionsBar(msg, blocked)}
+            </div>
             {messageBody(msg)}
           </div>
-          {messageRowActionsBar(msg, blocked)}
         </div>
       </div>
     );
@@ -866,34 +1005,6 @@ export function ModerationMessagePanel({
     effectiveLayout === "row" && "flex w-full min-w-0 flex-col gap-1.5",
     effectiveLayout === "card" &&
       "grid items-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]",
-  );
-
-  const toolbarIconBtnClass = (active: boolean) =>
-    cn(
-      "flex shrink-0 items-center justify-center rounded-md border transition-colors",
-      isSidebarVariant ? "h-9 w-9" : "h-7 w-7",
-      active
-        ? "border-primary/45 bg-primary/15 text-primary shadow-sm"
-        : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/40 hover:text-foreground",
-    );
-
-  const layoutBtn = (l: ModerationChatLayout, icon: ReactNode, label: string) => (
-    <Tooltip key={l}>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={() => onLayoutChange(l)}
-          className={toolbarIconBtnClass(effectiveLayout === l)}
-          aria-pressed={effectiveLayout === l}
-          aria-label={label}
-        >
-          {icon}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        <p className="text-xs">{label}</p>
-      </TooltipContent>
-    </Tooltip>
   );
 
   const handleConfirmDelete = () => {
@@ -1052,11 +1163,11 @@ export function ModerationMessagePanel({
     />
   ));
 
-  const sidebarAccordionMaxHeight = "max-h-[160px]";
+  const sidebarAccordionMaxHeight = "max-h-[180px]";
   const moderationAccordionMaxHeights = {
-    selected: "max-h-[260px]",
-    blocked: "max-h-[220px]",
-    hidden: "max-h-[220px]",
+    selected: "max-h-[300px]",
+    blocked: "max-h-[260px]",
+    hidden: "max-h-[260px]",
   } as const;
   const selectedAccordionMaxHeight = isSidebarVariant
     ? sidebarAccordionMaxHeight
@@ -1129,15 +1240,9 @@ export function ModerationMessagePanel({
     <aside className={managementPanelClass}>{managementAccordionSections}</aside>
   ) : null;
 
+  // Sidebar-only: compact search bar (no layout toggle)
   const chatToolbar = (
-    <div
-      className={cn(
-        "flex shrink-0 overflow-visible",
-        isSidebarVariant
-          ? "mb-2.5 flex-row items-center gap-2 pt-2"
-          : "mb-2 flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:gap-2.5",
-      )}
-    >
+    <div className="mb-2.5 flex shrink-0 flex-row items-center gap-2 overflow-visible pt-2">
       <div className="relative min-h-0 min-w-0 flex-1 overflow-visible px-0.5">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -1147,36 +1252,71 @@ export function ModerationMessagePanel({
           className={cn(sidebarSearchInputClass, "pl-9 pr-2.5")}
         />
       </div>
-      <div className="flex shrink-0 items-center justify-end gap-1.5 sm:justify-start">
-        <TooltipProvider delayDuration={100}>
-          {!isSidebarVariant ? (
-            <div
-              className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/25 p-0.5"
-              role="group"
-              aria-label="Message layout"
-            >
-              {layoutBtn("card", <Grid3x3 className="h-3.5 w-3.5" />, "Card view")}
-              {layoutBtn("row", <List className="h-3.5 w-3.5" />, "Row view")}
-            </div>
-          ) : null}
-        </TooltipProvider>
-        {!hasManagementData && !isStudioChat && onToggleShowHidden ? (
-          <Button
-            type="button"
-            size="sm"
-            variant={showHidden ? "default" : "outline"}
-            className={cn(
-              "shrink-0 rounded-md border-border/50 font-medium shadow-sm",
-              isSidebarVariant ? "h-9 px-2 text-[11px]" : "h-[38px] px-2.5 text-[11px]",
-            )}
-            onClick={onToggleShowHidden}
-          >
-            {showHidden ? "Hide hidden" : "Show hidden"}
-          </Button>
-        ) : null}
-      </div>
     </div>
   );
+
+  // Moderation variant: unified header — title on top, search + auto-scroll in one row
+  const isPrivateStudioMode = isStudioChat && studioActiveTarget?.type === "private";
+  const privateTarget = isPrivateStudioMode
+    ? (studioActiveTarget as Extract<StudioChatTarget, { type: "private" }>)
+    : null;
+
+  const moderationChatHeader = isModerationVariant ? (
+    <div className="mb-3 flex shrink-0 flex-col gap-2">
+      {/* Title row — with back arrow in private mode */}
+      <div className="flex min-w-0 items-center gap-1.5">
+        {isPrivateStudioMode && onStudioSelectBroadcast && (
+          <button
+            type="button"
+            onClick={onStudioSelectBroadcast}
+            className="flex shrink-0 items-center justify-center rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            title="Back to All Studio Chat"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[11px] font-bold tracking-wide text-foreground">
+            {isPrivateStudioMode
+              ? `Private · ${privateTarget!.username}`
+              : isStudioChat ? "Studio Chat Messages" : "Chat Messages"} · {messages.length}
+          </h3>
+          {isPrivateStudioMode && (privateTarget!.role || privateTarget!.status) && (
+            <p className="mt-px truncate text-[10px] text-muted-foreground">
+              {[privateTarget!.role, privateTarget!.status].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+      </div>
+      {/* Search + Auto Scroll — broadcast mode only */}
+      {!isPrivateStudioMode && (
+        <div className="flex items-center gap-2.5">
+          <div className="relative min-w-0 flex-1 overflow-visible">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className={cn(sidebarSearchInputClass, "pl-9 pr-2.5")}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="whitespace-nowrap text-[11px] font-semibold text-muted-foreground">Auto Scroll</span>
+            <Switch
+              checked={autoScroll}
+              onCheckedChange={(checked) => {
+                onAutoScrollChange(checked);
+                if (checked) setTimeout(() => requestScrollToBottom(), 80);
+              }}
+              aria-label="Auto Scroll"
+              className="h-5 w-9 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600 [&_span]:h-4 [&_span]:w-4 [&_span]:bg-white"
+            />
+          </div>
+        </div>
+      )}
+      <div className="border-b border-border/40" />
+    </div>
+  ) : null;
 
   const ComposerIcon = composerMessageType === "pinned" ? Pin : Megaphone;
   const effectiveComposerPlaceholder =
@@ -1370,8 +1510,7 @@ export function ModerationMessagePanel({
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-1 md:items-stretch">
         {managementColumn}
         <section className="flex min-h-0 min-w-0 flex-col">
-          {chatToolbar}
-          {chatMessagesHeading}
+          {moderationChatHeader}
           {mainChatMessages}
           {chatComposer}
         </section>
@@ -1387,10 +1526,27 @@ export function ModerationMessagePanel({
     </section>
   ) : null;
 
-  const mainChatSection = isModerationVariant && !showManagementColumn ? (
+  const showStudioSidebar = isStudioChat && isModerationVariant && studioUsers !== undefined;
+
+  const studioModerationPanel = showStudioSidebar ? (
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-1 md:items-stretch">
+      <StudioUsersSidebar
+        users={studioUsers ?? []}
+        activeTarget={studioActiveTarget}
+        onSelectBroadcast={onStudioSelectBroadcast}
+        onSelectUser={onStudioSelectUser}
+      />
+      <section className="flex min-h-0 min-w-0 flex-col">
+        {moderationChatHeader}
+        {mainChatMessages}
+        <div className="shrink-0">{chatComposer}</div>
+      </section>
+    </div>
+  ) : null;
+
+  const mainChatSection = isModerationVariant && !showManagementColumn && !showStudioSidebar ? (
     <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0">{chatToolbar}</div>
-      {chatMessagesHeading}
+      {moderationChatHeader}
       {mainChatMessages}
       <div className="shrink-0">{chatComposer}</div>
     </section>
@@ -1405,6 +1561,7 @@ export function ModerationMessagePanel({
     >
       {sidebarChatPanel}
       {moderationChatPanel}
+      {studioModerationPanel}
       {mainChatSection}
 
 

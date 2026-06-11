@@ -13,11 +13,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Copy, Check, Ban, ChevronDown, User, Trash2 } from "lucide-react";
-import { useState, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useModerationStore, type QAQuestion } from "@/contexts/ModerationStoreContext";
 import type { BlockedUser } from "./ChatModeration";
 
 export type QAPanelVariant = "moderation" | "sidebar";
@@ -92,9 +95,9 @@ function QAAccordionSection({
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t border-border/40 px-1.5 pb-1.5 pt-1">
-            <ScrollArea className={cn("w-full overflow-hidden", maxHeightClass)}>
-              <div className="flex w-full flex-col items-stretch gap-1.5 pr-1">{children}</div>
-            </ScrollArea>
+            <div className={cn("w-full overflow-x-hidden overflow-y-auto custom-scrollbar pr-1", maxHeightClass)}>
+              <div className="flex w-full flex-col items-stretch gap-1.5">{children}</div>
+            </div>
           </div>
         </CollapsibleContent>
       </div>
@@ -110,25 +113,39 @@ function QABlockedUserCard({
   onUnblock?: () => void;
 }) {
   return (
-    <div className="w-full overflow-hidden rounded-[8px] border border-border/50 bg-muted/25 px-2 py-1.5 shadow-sm">
-      <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-        <span className="min-w-0 truncate text-[11px] font-semibold text-foreground">{user.username}</span>
-        <span className="shrink-0 rounded border border-destructive/25 bg-destructive/10 px-1 py-px text-[8px] font-bold uppercase leading-none text-destructive">
-          Blocked
-        </span>
+    <div className="group w-full overflow-hidden rounded-[8px] border border-border/50 bg-muted/25 px-2 py-1.5 shadow-sm">
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+          <span className="min-w-0 truncate text-[11px] font-semibold text-foreground">{user.username}</span>
+          <span className="shrink-0 rounded border border-destructive/25 bg-destructive/10 px-1 py-px text-[8px] font-bold uppercase leading-none text-destructive">
+            Blocked
+          </span>
+        </div>
+        {onUnblock && (
+          <div className={qaActionsRevealClass}>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-[22px] w-[22px] shrink-0 rounded-md border border-transparent p-0 text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:ring-1 focus-visible:ring-destructive/40"
+                    aria-label="Unblock user"
+                    onClick={onUnblock}
+                  >
+                    <Ban className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">Unblock</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </div>
       <p className="mt-px font-mono text-[10px] text-muted-foreground">Blocked {user.blockedAt}</p>
-      {onUnblock && (
-        <div className="mt-1.5">
-          <Button
-            variant="ghost"
-            onClick={onUnblock}
-            className="h-[22px] rounded-full border border-destructive/30 bg-destructive/5 px-2 text-[10px] font-semibold text-destructive shadow-none transition-colors hover:bg-destructive/15 hover:text-destructive dark:border-destructive/40 dark:bg-destructive/10"
-          >
-            Unblock User
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -136,7 +153,7 @@ function QABlockedUserCard({
 // ─── Compact sidebar card (accordion LHS only) ────────────────────────────────
 
 const qaSidebarCompactCardClass =
-  "w-full overflow-hidden rounded-[8px] border border-border/50 bg-card px-2 py-1.5 shadow-sm";
+  "group w-full overflow-hidden rounded-[8px] border border-border/50 bg-card px-2 py-1.5 shadow-sm";
 
 const qaSidebarActionBtnBase =
   "h-[22px] shrink-0 rounded-full border px-1.5 text-[10px] font-semibold shadow-none transition-colors";
@@ -152,10 +169,12 @@ function QACompactSidebarCard({
   type,
   onQueue,
   onSelect,
+  onSkip,
   participants,
   onAssignQuestion,
   onCopy,
   onBlockUser,
+  onUnblockUser,
   onDelete,
   copiedQuestionId,
   isUserBlocked,
@@ -164,10 +183,12 @@ function QACompactSidebarCard({
   type: "selected" | "skipped";
   onQueue: (id: string) => void;
   onSelect?: (id: string) => void;
+  onSkip?: (id: string) => void;
   participants: string[];
   onAssignQuestion: (questionId: string, participant: string) => void;
   onCopy: (questionId: string, question: string) => void;
   onBlockUser: (username: string) => void;
+  onUnblockUser?: (username: string) => void;
   onDelete: (id: string) => void;
   copiedQuestionId: string | null;
   isUserBlocked: (username: string) => boolean;
@@ -176,29 +197,70 @@ function QACompactSidebarCard({
 
   return (
     <div className={qaSidebarCompactCardClass}>
-      {/* Header: username + time + status badge */}
-      <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-        <span className="min-w-0 truncate text-[12px] font-bold leading-tight text-foreground">
-          {question.username}
-        </span>
-        <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground">
-          {question.timestamp}
-        </span>
-        {blocked && (
-          <span className="shrink-0 rounded border border-destructive/25 bg-destructive/10 px-1 py-px text-[8px] font-bold uppercase leading-none text-destructive">
-            Blocked
+      {/* Header: username + time (left) | Copy, Block/Unblock, Delete (right) */}
+      <div className="flex min-w-0 items-center justify-between gap-1">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+          <span className="min-w-0 truncate text-[12px] font-bold leading-tight text-foreground">
+            {question.username}
           </span>
-        )}
-        {type === "selected" && (
-          <span className="shrink-0 rounded-full bg-[#eef4ff] px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-[#1d4ed8] dark:bg-primary/15 dark:text-primary">
-            Selected
+          <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground">
+            {question.timestamp}
           </span>
-        )}
-        {type === "skipped" && (
-          <span className="shrink-0 rounded-full bg-[#f1f5f9] px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-[#64748b] dark:bg-muted dark:text-muted-foreground">
-            Skipped
-          </span>
-        )}
+          {blocked && (
+            <span className="shrink-0 rounded border border-destructive/25 bg-destructive/10 px-1 py-px text-[8px] font-bold uppercase leading-none text-destructive">
+              Blocked
+            </span>
+          )}
+        </div>
+
+        {/* Icon cluster — hidden by default, revealed on hover/focus */}
+        <div className={cn("flex shrink-0 items-center gap-0.5", qaActionsRevealClass)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={qaSidebarIconBtn}
+            onClick={() => onCopy(question.id, question.question)}
+            title="Copy"
+          >
+            {copiedQuestionId === question.id ? (
+              <Check className="h-3 w-3 text-primary" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </Button>
+
+          {blocked ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(qaSidebarIconBtn, "text-destructive hover:border-red-200 hover:bg-red-50 dark:hover:border-red-900/40 dark:hover:bg-red-950/30 dark:hover:text-red-400")}
+              onClick={() => onUnblockUser?.(question.username)}
+              title="Unblock user"
+            >
+              <Ban className="h-3 w-3" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={qaSidebarIconBtn}
+              onClick={() => onBlockUser(question.username)}
+              title="Block user"
+            >
+              <Ban className="h-3 w-3" />
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(qaSidebarIconBtn, qaSidebarIconBtnDanger)}
+            onClick={() => onDelete(question.id)}
+            title="Delete question"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
       {/* Question text — max 2 lines */}
@@ -206,8 +268,8 @@ function QACompactSidebarCard({
         {question.question}
       </p>
 
-      {/* Action row — wraps freely inside the card width */}
-      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+      {/* Action row — Queue / [Select] / Assign only */}
+      <div className={cn("mt-1.5 flex flex-wrap items-center gap-1", qaActionsRevealClass)}>
         <Button
           variant="ghost"
           onClick={() => onQueue(question.id)}
@@ -219,13 +281,26 @@ function QACompactSidebarCard({
           Queue
         </Button>
 
+        {type === "selected" && onSkip && (
+          <Button
+            variant="ghost"
+            onClick={() => onSkip(question.id)}
+            className={cn(
+              qaSidebarActionBtnBase,
+              "border-[#dbe3ef] bg-transparent text-[#475569] hover:border-[#cbd5e1] hover:bg-[#f8fafc] dark:border-border dark:text-muted-foreground dark:hover:bg-muted/40",
+            )}
+          >
+            Skip
+          </Button>
+        )}
+
         {type === "skipped" && onSelect && (
           <Button
             variant="ghost"
             onClick={() => onSelect(question.id)}
             className={cn(
               qaSidebarActionBtnBase,
-              "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:border-[#93c5fd] hover:bg-[#dbeafe] dark:border-primary/40 dark:bg-primary/10 dark:text-primary dark:hover:bg-primary/15",
+              "border-[#dbe3ef] bg-transparent text-[#475569] hover:border-[#cbd5e1] hover:bg-[#f8fafc] dark:border-border dark:text-muted-foreground dark:hover:bg-muted/40",
             )}
           >
             Select
@@ -238,44 +313,6 @@ function QACompactSidebarCard({
           onAssignQuestion={onAssignQuestion}
           compact
         />
-
-        {/* Divider */}
-        <div className="h-3 w-px shrink-0 bg-border/50" />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={qaSidebarIconBtn}
-          onClick={() => onCopy(question.id, question.question)}
-          title="Copy"
-        >
-          {copiedQuestionId === question.id ? (
-            <Check className="h-3 w-3 text-primary" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={qaSidebarIconBtn}
-          onClick={() => onBlockUser(question.username)}
-          title="Block user"
-          disabled={blocked}
-        >
-          <Ban className="h-3 w-3" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(qaSidebarIconBtn, qaSidebarIconBtnDanger)}
-          onClick={() => onDelete(question.id)}
-          title="Delete question"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
       </div>
     </div>
   );
@@ -283,21 +320,16 @@ function QACompactSidebarCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-interface Question {
-  id: string;
-  username: string;
-  question: string;
-  timestamp: string;
-  isApproved: boolean;
-  status: "queue" | "selected" | "closed";
-  assignedTo?: string;
-  isHidden?: boolean;
-}
+// QAQuestion is imported from ModerationStoreContext — re-export for consumers that import from here
+type Question = QAQuestion;
 
 interface QAPanelProps {
   variant?: QAPanelVariant;
+  /** @deprecated – block/unblock is now handled via the shared ModerationStore */
   onBlockUser?: (username: string) => void;
+  /** @deprecated – block/unblock is now handled via the shared ModerationStore */
   onUnblockUser?: (username: string) => void;
+  /** @deprecated – blocked users are now read from the shared ModerationStore; this prop is ignored */
   blockedUsers?: BlockedUser[];
   onQuestionMetricsChange?: (metrics: { total: number; queue: number; selected: number; closed: number }) => void;
   onQASpike?: (payload: { increaseBy: number; queueCount: number }) => void;
@@ -305,12 +337,10 @@ interface QAPanelProps {
 
 export function QAPanel({
   variant = "moderation",
-  onBlockUser,
-  onUnblockUser,
-  blockedUsers = [],
   onQuestionMetricsChange,
   onQASpike,
 }: QAPanelProps) {
+  const { qaQuestions: questions, setQAQuestions: setQuestions, blockedUsers, blockUser, unblockUser } = useModerationStore();
   const isSidebar = variant === "sidebar";
   const [activeTab, setActiveTab] = useState<"queue" | "selected" | "closed">("queue");
   const [searchQuery, setSearchQuery] = useState("");
@@ -323,44 +353,8 @@ export function QAPanel({
     blocked: false,
   });
   const { toast } = useToast();
-  const [questions, setQuestions] = useState<Question[]>([
-    {
-      id: "1",
-      username: "CuriousUser",
-      question: "What are the key takeaways from this session?",
-      timestamp: "2:30 PM",
-      isApproved: false,
-      status: "queue",
-      isHidden: false,
-    },
-    {
-      id: "2",
-      username: "Learner123",
-      question: "Can you provide more details about the implementation?",
-      timestamp: "2:32 PM",
-      isApproved: false,
-      status: "queue",
-      isHidden: false,
-    },
-    {
-      id: "3",
-      username: "TechEnthusiast",
-      question: "How does this compare to other solutions?",
-      timestamp: "2:35 PM",
-      isApproved: false,
-      status: "queue",
-      isHidden: false,
-    },
-    {
-      id: "4",
-      username: "Developer99",
-      question: "What tools do you recommend for beginners?",
-      timestamp: "2:38 PM",
-      isApproved: false,
-      status: "queue",
-      isHidden: false,
-    },
-  ]);
+  const [qaAutoScroll, setQaAutoScroll] = useState(false);
+  const queueBottomRef = useRef<HTMLDivElement>(null);
 
   const [, setRecentQueueIncreaseAt] = useState<number[]>([]);
 
@@ -448,7 +442,8 @@ export function QAPanel({
 
   const handleConfirmBlock = () => {
     if (selectedUserToBlock) {
-      onBlockUser?.(selectedUserToBlock);
+      blockUser(selectedUserToBlock);
+      toast({ title: "User blocked", description: `${selectedUserToBlock} has been blocked.` });
     }
     setIsConfirmBlockOpen(false);
     setSelectedUserToBlock(null);
@@ -471,6 +466,12 @@ export function QAPanel({
   const queueQuestions = useMemo(() => {
     return filterQuestions(filteredQuestions.filter((q) => q.status === "queue"));
   }, [filteredQuestions, searchQuery]);
+
+  useEffect(() => {
+    if (qaAutoScroll && queueBottomRef.current) {
+      queueBottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [queueQuestions.length, qaAutoScroll]);
 
   const selectedQuestions = useMemo(() => {
     return filterQuestions(filteredQuestions.filter((q) => q.status === "selected"));
@@ -552,6 +553,7 @@ export function QAPanel({
     onAssignQuestion: handleAssignQuestion,
     onCopy: handleCopy,
     onBlockUser: handleBlockRequest,
+    onUnblockUser: unblockUser,
     onDelete: handleDeleteQuestion,
     copiedQuestionId,
     isUserBlocked,
@@ -632,7 +634,21 @@ export function QAPanel({
               <div className="flex flex-col gap-2 pb-1">
                 {queueQuestions.length > 0 ? (
                   queueQuestions.map((q) => (
-                    <QueueQuestionCard key={q.id} question={q} {...queueCardProps} />
+                    <QASidebarQuestionCard
+                      key={q.id}
+                      question={q}
+                      type="queue"
+                      onSelect={handleSelectQuestion}
+                      onSkip={handleSkipQuestion}
+                      participants={participants}
+                      onAssignQuestion={handleAssignQuestion}
+                      onCopy={handleCopy}
+                      onBlockUser={handleBlockRequest}
+                      onUnblockUser={unblockUser}
+                      onDelete={handleDeleteQuestion}
+                      copiedQuestionId={copiedQuestionId}
+                      isUserBlocked={isUserBlocked}
+                    />
                   ))
                 ) : (
                   <p className="py-4 text-center text-xs text-muted-foreground">No questions in queue.</p>
@@ -649,7 +665,21 @@ export function QAPanel({
               <div className="flex flex-col gap-2 pb-1">
                 {selectedQuestions.length > 0 ? (
                   selectedQuestions.map((q) => (
-                    <SelectedQuestionCard key={q.id} question={q} {...selectedCardProps} />
+                    <QASidebarQuestionCard
+                      key={q.id}
+                      question={q}
+                      type="selected"
+                      onQueue={handleQueueQuestion}
+                      onSkip={handleSkipQuestion}
+                      participants={participants}
+                      onAssignQuestion={handleAssignQuestion}
+                      onCopy={handleCopy}
+                      onBlockUser={handleBlockRequest}
+                      onUnblockUser={unblockUser}
+                      onDelete={handleDeleteQuestion}
+                      copiedQuestionId={copiedQuestionId}
+                      isUserBlocked={isUserBlocked}
+                    />
                   ))
                 ) : (
                   <p className="py-4 text-center text-xs text-muted-foreground">No selected questions.</p>
@@ -666,7 +696,21 @@ export function QAPanel({
               <div className="flex flex-col gap-2 pb-1">
                 {closedQuestions.length > 0 ? (
                   closedQuestions.map((q) => (
-                    <ClosedQuestionCard key={q.id} question={q} {...closedCardProps} />
+                    <QASidebarQuestionCard
+                      key={q.id}
+                      question={q}
+                      type="closed"
+                      onSelect={handleSelectQuestion}
+                      onQueue={handleQueueQuestion}
+                      participants={participants}
+                      onAssignQuestion={handleAssignQuestion}
+                      onCopy={handleCopy}
+                      onBlockUser={handleBlockRequest}
+                      onUnblockUser={unblockUser}
+                      onDelete={handleDeleteQuestion}
+                      copiedQuestionId={copiedQuestionId}
+                      isUserBlocked={isUserBlocked}
+                    />
                   ))
                 ) : (
                   <p className="py-4 text-center text-xs text-muted-foreground">No skipped questions.</p>
@@ -694,10 +738,12 @@ export function QAPanel({
                     question={q}
                     type="selected"
                     onQueue={handleQueueQuestion}
+                    onSkip={handleSkipQuestion}
                     participants={participants}
                     onAssignQuestion={handleAssignQuestion}
                     onCopy={handleCopy}
                     onBlockUser={handleBlockRequest}
+                    onUnblockUser={unblockUser}
                     onDelete={handleDeleteQuestion}
                     copiedQuestionId={copiedQuestionId}
                     isUserBlocked={isUserBlocked}
@@ -730,6 +776,7 @@ export function QAPanel({
                     onAssignQuestion={handleAssignQuestion}
                     onCopy={handleCopy}
                     onBlockUser={handleBlockRequest}
+                    onUnblockUser={unblockUser}
                     onDelete={handleDeleteQuestion}
                     copiedQuestionId={copiedQuestionId}
                     isUserBlocked={isUserBlocked}
@@ -755,7 +802,7 @@ export function QAPanel({
                   <QABlockedUserCard
                     key={user.id}
                     user={user}
-                    onUnblock={onUnblockUser ? () => onUnblockUser(user.username) : undefined}
+                    onUnblock={() => unblockUser(user.username)}
                   />
                 ))
               ) : (
@@ -769,25 +816,33 @@ export function QAPanel({
 
           {/* Right main panel */}
           <section className="flex min-h-0 min-w-0 flex-col">
-            {/* Search bar */}
-            <div className="mb-2 flex w-full shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <div className="relative w-full min-w-0 max-w-[480px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" aria-hidden />
-                <Input
-                  placeholder="Search questions…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={qaSearchInputClass}
-                  aria-label="Search questions"
-                />
-              </div>
-            </div>
-
-            {/* Queue heading */}
-            <div className="mb-2 flex shrink-0 items-center justify-between gap-3 border-b border-border/40 pb-1.5">
+            {/* Header: title → search + Auto Scroll */}
+            <div className="mb-3 flex shrink-0 flex-col gap-2">
               <h3 className="whitespace-nowrap text-[11px] font-bold tracking-wide text-foreground">
                 Queue · {queueCount}
               </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94a3b8]" aria-hidden />
+                  <Input
+                    placeholder="Search questions…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={qaSearchInputClass}
+                    aria-label="Search questions"
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className="whitespace-nowrap text-[11px] font-semibold text-muted-foreground">Auto Scroll</span>
+                  <Switch
+                    checked={qaAutoScroll}
+                    onCheckedChange={setQaAutoScroll}
+                    aria-label="Auto Scroll"
+                    className="h-5 w-9 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600 [&_span]:h-4 [&_span]:w-4 [&_span]:bg-white"
+                  />
+                </div>
+              </div>
+              <div className="border-b border-border/40" />
             </div>
 
             {/* Queue list */}
@@ -800,6 +855,7 @@ export function QAPanel({
                 ) : (
                   <p className="py-4 text-center text-xs text-muted-foreground">No questions in queue.</p>
                 )}
+                <div ref={queueBottomRef} />
               </div>
             </ScrollArea>
           </section>
@@ -825,7 +881,170 @@ export function QAPanel({
   );
 }
 
+// ─── Sidebar (right-rail) question card ──────────────────────────────────────
+
+const qaSidebarCardShell =
+  "group w-full overflow-hidden rounded-xl border border-[#e2e8f0] bg-white px-3 py-2.5 shadow-sm dark:border-border/50 dark:bg-card";
+
+const qaSidebarCardBtn =
+  "h-[26px] shrink-0 rounded-full border border-[#dbe3ef] bg-transparent px-2.5 text-[11px] font-semibold text-[#475569] shadow-none transition-colors hover:border-[#cbd5e1] hover:bg-[#f8fafc] dark:border-border dark:text-muted-foreground dark:hover:bg-muted/40";
+
+const qaSidebarCardIconBtn =
+  "h-[26px] w-[26px] shrink-0 rounded-md border border-transparent bg-transparent text-[#64748b] transition-colors hover:border-[#e2e8f0] hover:bg-[#f8fafc] hover:text-[#334155] dark:text-muted-foreground dark:hover:border-border dark:hover:bg-muted/50 dark:hover:text-foreground";
+
+const qaSidebarCardIconBtnDanger =
+  "hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:hover:border-red-900/40 dark:hover:bg-red-950/30 dark:hover:text-red-400";
+
+function QASidebarQuestionCard({
+  question,
+  type,
+  onSelect,
+  onSkip,
+  onQueue,
+  participants,
+  onAssignQuestion,
+  onCopy,
+  onBlockUser,
+  onUnblockUser,
+  onDelete,
+  copiedQuestionId,
+  isUserBlocked,
+}: {
+  question: Question;
+  type: "queue" | "selected" | "closed";
+  onSelect?: (id: string) => void;
+  onSkip?: (id: string) => void;
+  onQueue?: (id: string) => void;
+  participants: string[];
+  onAssignQuestion: (questionId: string, participant: string) => void;
+  onCopy: (questionId: string, question: string) => void;
+  onBlockUser: (username: string) => void;
+  onUnblockUser?: (username: string) => void;
+  onDelete: (id: string) => void;
+  copiedQuestionId: string | null;
+  isUserBlocked: (username: string) => boolean;
+}) {
+  const blocked = isUserBlocked(question.username);
+
+  return (
+    <div className={qaSidebarCardShell}>
+      {/* Row 1: username + time (left) | secondary icon actions (right) */}
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+          <span className="min-w-0 truncate text-[13px] font-bold leading-tight text-foreground">
+            {question.username}
+          </span>
+          <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
+            {question.timestamp}
+          </span>
+          {blocked && (
+            <span className="shrink-0 text-[10px] font-medium text-destructive">Blocked</span>
+          )}
+        </div>
+
+        {/* Secondary actions — hidden by default, revealed on hover/focus */}
+        <div className={cn("flex shrink-0 items-center gap-0.5", qaActionsRevealClass)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={qaSidebarCardIconBtn}
+            onClick={() => onCopy(question.id, question.question)}
+            title="Copy"
+          >
+            {copiedQuestionId === question.id ? (
+              <Check className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </Button>
+
+          {blocked ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(qaSidebarCardIconBtn, "text-destructive hover:border-red-200 hover:bg-red-50 dark:hover:border-red-900/40 dark:hover:bg-red-950/30 dark:hover:text-red-400")}
+              onClick={() => onUnblockUser?.(question.username)}
+              title="Unblock user"
+            >
+              <Ban className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={qaSidebarCardIconBtn}
+              onClick={() => onBlockUser(question.username)}
+              title="Block user"
+            >
+              <Ban className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(qaSidebarCardIconBtn, qaSidebarCardIconBtnDanger)}
+            onClick={() => onDelete(question.id)}
+            title="Delete question"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Row 2: question text */}
+      <p className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-foreground/80">
+        {question.question}
+      </p>
+
+      {/* Row 3: primary actions only — Select / Skip|Queue / Assign */}
+      <div className={cn("mt-2 flex flex-wrap items-center gap-1.5", qaActionsRevealClass)}>
+        {type === "queue" && onSelect && (
+          <Button variant="ghost" onClick={() => onSelect(question.id)} className={qaSidebarCardBtn}>
+            Select
+          </Button>
+        )}
+        {type === "queue" && onSkip && (
+          <Button variant="ghost" onClick={() => onSkip(question.id)} className={qaSidebarCardBtn}>
+            Skip
+          </Button>
+        )}
+        {type === "selected" && onQueue && (
+          <Button variant="ghost" onClick={() => onQueue(question.id)} className={qaSidebarCardBtn}>
+            Queue
+          </Button>
+        )}
+        {type === "selected" && onSkip && (
+          <Button variant="ghost" onClick={() => onSkip(question.id)} className={qaSidebarCardBtn}>
+            Skip
+          </Button>
+        )}
+        {type === "closed" && onSelect && (
+          <Button variant="ghost" onClick={() => onSelect(question.id)} className={qaSidebarCardBtn}>
+            Select
+          </Button>
+        )}
+        {type === "closed" && onQueue && (
+          <Button variant="ghost" onClick={() => onQueue(question.id)} className={qaSidebarCardBtn}>
+            Queue
+          </Button>
+        )}
+
+        <AssignQuestionDropdown
+          questionId={question.id}
+          participants={participants}
+          onAssignQuestion={onAssignQuestion}
+          compact
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Card style constants ─────────────────────────────────────────────────────
+
+const qaActionsRevealClass =
+  "opacity-0 invisible pointer-events-none transition-[opacity,visibility] duration-150 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:visible group-focus-within:pointer-events-auto";
 
 const qaCardShell =
   "rounded-xl border border-[#e2e8f0] bg-white px-3.5 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[box-shadow,border-color] hover:border-[#cbd5e1] hover:shadow-[0_1px_3px_rgba(15,23,42,0.06)] dark:border-border/50 dark:bg-card";
@@ -969,6 +1188,7 @@ function QueueQuestionCard({
   onAssignQuestion,
   onCopy,
   onBlockUser,
+  onUnblockUser,
   onDelete,
   copiedQuestionId,
   isUserBlocked,
@@ -980,6 +1200,7 @@ function QueueQuestionCard({
   onAssignQuestion: (questionId: string, participant: string) => void;
   onCopy: (questionId: string, question: string) => void;
   onBlockUser: (username: string) => void;
+  onUnblockUser?: (username: string) => void;
   onDelete: (id: string) => void;
   copiedQuestionId: string | null;
   isUserBlocked: (username: string) => boolean;
@@ -990,22 +1211,22 @@ function QueueQuestionCard({
       <div className="flex items-center justify-between gap-2">
         {/* Left: meta */}
         <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
-          <span className="truncate text-sm font-bold leading-tight text-[#0f1f3d] dark:text-foreground">
+          <span className="truncate text-[12px] font-semibold leading-tight text-[#0f1f3d] dark:text-foreground">
             {question.username}
           </span>
-          <span className="shrink-0 text-xs font-medium tabular-nums text-[#64748b] dark:text-muted-foreground">
+          <span className="shrink-0 font-mono text-[10px] text-[#64748b] dark:text-muted-foreground">
             {question.timestamp}
           </span>
           {blocked && (
-            <span className="shrink-0 text-xs font-medium text-destructive">Blocked</span>
+            <span className="shrink-0 text-[10px] font-medium text-destructive">Blocked</span>
           )}
           {question.assignedTo && (
-            <span className="shrink-0 truncate text-xs font-medium text-primary">Assigned · {question.assignedTo}</span>
+            <span className="shrink-0 truncate text-[10px] font-medium text-primary">Assigned · {question.assignedTo}</span>
           )}
         </div>
-        {/* Right: action buttons + icon buttons */}
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" className={qaBtnSelect} onClick={() => onSelect(question.id)}>
+        {/* Right: action buttons + icon buttons — hidden by default, revealed on hover/focus */}
+        <div className={cn("flex shrink-0 items-center gap-1", qaActionsRevealClass)}>
+          <Button variant="ghost" className={qaBtnSkip} onClick={() => onSelect(question.id)}>
             Select
           </Button>
           <Button variant="ghost" className={qaBtnSkip} onClick={() => onSkip(question.id)}>
@@ -1030,16 +1251,27 @@ function QueueQuestionCard({
               <Copy className="h-3.5 w-3.5" />
             )}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={qaIconBtn}
-            onClick={() => onBlockUser(question.username)}
-            title="Block user"
-            disabled={blocked}
-          >
-            <Ban className="h-3.5 w-3.5" />
-          </Button>
+          {blocked ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(qaIconBtn, "text-red-500 dark:text-red-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:hover:border-red-900/40 dark:hover:bg-red-950/30 dark:hover:text-red-300")}
+              onClick={() => onUnblockUser?.(question.username)}
+              title="Unblock user"
+            >
+              <Ban className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={qaIconBtn}
+              onClick={() => onBlockUser(question.username)}
+              title="Block user"
+            >
+              <Ban className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -1051,7 +1283,7 @@ function QueueQuestionCard({
           </Button>
         </div>
       </div>
-      <p className="mt-1.5 text-[12px] font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
+      <p className="mt-1.5 text-[12px] leading-snug text-[#24324b] dark:text-foreground/85">
         {question.question}
       </p>
     </div>
@@ -1087,24 +1319,24 @@ function SelectedQuestionCard({
       <div className="flex items-center justify-between gap-2">
         {/* Left: meta */}
         <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
-          <span className="truncate text-sm font-bold leading-tight text-[#0f1f3d] dark:text-foreground">
+          <span className="truncate text-[12px] font-semibold leading-tight text-[#0f1f3d] dark:text-foreground">
             {question.username}
           </span>
-          <span className="shrink-0 text-xs font-medium tabular-nums text-[#64748b] dark:text-muted-foreground">
+          <span className="shrink-0 font-mono text-[10px] text-[#64748b] dark:text-muted-foreground">
             {question.timestamp}
           </span>
           {blocked && (
-            <span className="shrink-0 text-xs font-medium text-destructive">Blocked</span>
+            <span className="shrink-0 text-[10px] font-medium text-destructive">Blocked</span>
           )}
           {question.assignedTo && (
-            <span className="shrink-0 truncate text-xs font-medium text-primary">Assigned · {question.assignedTo}</span>
+            <span className="shrink-0 truncate text-[10px] font-medium text-primary">Assigned · {question.assignedTo}</span>
           )}
           <span className="shrink-0 rounded-full bg-[#eef4ff] px-2 py-0 text-[10px] font-semibold uppercase tracking-wide text-[#1d4ed8] dark:bg-primary/15 dark:text-primary">
             Selected
           </span>
         </div>
-        {/* Right: action buttons + icon buttons */}
-        <div className="flex shrink-0 items-center gap-1">
+        {/* Right: action buttons + icon buttons — hidden by default, revealed on hover/focus */}
+        <div className={cn("flex shrink-0 items-center gap-1", qaActionsRevealClass)}>
           <Button variant="ghost" className={qaBtnSkip} onClick={() => onSkip(question.id)}>
             Skip
           </Button>
@@ -1151,7 +1383,7 @@ function SelectedQuestionCard({
           </Button>
         </div>
       </div>
-      <p className="mt-1.5 text-[12px] font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
+      <p className="mt-1.5 text-[12px] leading-snug text-[#24324b] dark:text-foreground/85">
         {question.question}
       </p>
     </div>
@@ -1187,24 +1419,24 @@ function ClosedQuestionCard({
       <div className="flex items-center justify-between gap-2">
         {/* Left: meta */}
         <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
-          <span className="truncate text-sm font-bold leading-tight text-[#0f1f3d] dark:text-foreground">
+          <span className="truncate text-[12px] font-semibold leading-tight text-[#0f1f3d] dark:text-foreground">
             {question.username}
           </span>
-          <span className="shrink-0 text-xs font-medium tabular-nums text-[#64748b] dark:text-muted-foreground">
+          <span className="shrink-0 font-mono text-[10px] text-[#64748b] dark:text-muted-foreground">
             {question.timestamp}
           </span>
           {blocked && (
-            <span className="shrink-0 text-xs font-medium text-destructive">Blocked</span>
+            <span className="shrink-0 text-[10px] font-medium text-destructive">Blocked</span>
           )}
           {question.assignedTo && (
-            <span className="shrink-0 truncate text-xs font-medium text-primary">Assigned · {question.assignedTo}</span>
+            <span className="shrink-0 truncate text-[10px] font-medium text-primary">Assigned · {question.assignedTo}</span>
           )}
           <span className="shrink-0 rounded-full bg-[#f1f5f9] px-2 py-0 text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:bg-muted dark:text-muted-foreground">
             Skipped
           </span>
         </div>
-        {/* Right: action buttons + icon buttons */}
-        <div className="flex shrink-0 items-center gap-1">
+        {/* Right: action buttons + icon buttons — hidden by default, revealed on hover/focus */}
+        <div className={cn("flex shrink-0 items-center gap-1", qaActionsRevealClass)}>
           <Button variant="ghost" className={qaBtnSelect} onClick={() => onSelect(question.id)}>
             Select
           </Button>
@@ -1251,7 +1483,7 @@ function ClosedQuestionCard({
           </Button>
         </div>
       </div>
-      <p className="mt-1.5 text-[12px] font-normal leading-[1.35] text-[#24324b] dark:text-foreground/90">
+      <p className="mt-1.5 text-[12px] leading-snug text-[#24324b] dark:text-foreground/85">
         {question.question}
       </p>
     </div>

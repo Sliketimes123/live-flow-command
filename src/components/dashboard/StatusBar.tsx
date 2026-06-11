@@ -376,23 +376,29 @@ export function StatusBar({
         </Dialog>
       </div>
 
-      <div className="ml-auto flex items-center gap-4">
+      <div className="ml-auto flex items-center">
+        {/* ── Premium floating action dock ── */}
+        <div className="flex items-center gap-0.5 rounded-[16px] border px-[5px] py-[5px]
+          bg-white/95 border-black/[0.07] shadow-[0_1px_3px_rgba(0,0,0,0.07),0_3px_8px_rgba(0,0,0,0.04)]
+          dark:bg-slate-900/80 dark:border-white/[0.09] dark:shadow-[0_1px_3px_rgba(0,0,0,0.5),0_3px_8px_rgba(0,0,0,0.35)]">
+
         {onOpenModerationPanel ? (
           <>
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0 rounded-md px-3 text-xs font-semibold"
               onClick={onOpenModerationPanel}
+              className="h-[28px] shrink-0 rounded-[10px] px-3.5 text-[11.5px] font-semibold leading-none
+                bg-primary text-primary-foreground
+                hover:bg-primary/90 active:scale-[0.97]
+                transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Message Centre
-            </Button>
-            <div className="h-4 w-px bg-border" />
+            </button>
+            <div className="mx-[5px] h-[16px] w-px shrink-0 bg-black/10 dark:bg-white/10" />
           </>
         ) : null}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-0">
           {commentsEnabled && (
             <Dialog open={isSelectedChatDialogOpen} onOpenChange={(open) => {
               setIsSelectedChatDialogOpen(open);
@@ -404,18 +410,23 @@ export function StatusBar({
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer"
+                      <button
+                        type="button"
+                        aria-label="Selected messages"
+                        className="relative flex h-[28px] w-[28px] items-center justify-center rounded-[10px]
+                          text-slate-400 dark:text-slate-500
+                          hover:bg-primary/10 hover:text-primary
+                          dark:hover:bg-primary/15 dark:hover:text-primary
+                          active:scale-[0.93] transition-all duration-150
+                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
-                        <Star className="w-3.5 h-3.5" />
+                        <Star className="h-[14px] w-[14px]" />
                         {selectedMessages.length > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                          <span className="pointer-events-none absolute -right-[5px] -top-[5px] flex h-[15px] min-w-[15px] items-center justify-center rounded-full border-[1.5px] border-white bg-primary px-[3px] text-[8px] font-bold leading-none text-white dark:border-slate-900">
                             {selectedMessages.length}
                           </span>
                         )}
-                      </Button>
+                      </button>
                     </DialogTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -546,7 +557,7 @@ export function StatusBar({
             </Dialog>
           )}
 
-          {commentsEnabled && <div className="h-4 w-px bg-border mx-1" />}
+          {commentsEnabled && <div className="mx-[5px] h-[16px] w-px shrink-0 bg-black/10 dark:bg-white/10" />}
 
           {/* Block User Button */}
           <Dialog open={isBlockUserDialogOpen} onOpenChange={setIsBlockUserDialogOpen}>
@@ -554,14 +565,23 @@ export function StatusBar({
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-md relative flex items-center justify-center hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer">
-                      <Ban className="w-3.5 h-3.5" />
+                    <button
+                      type="button"
+                      aria-label="Blocked users"
+                      className="relative flex h-[28px] w-[28px] items-center justify-center rounded-[10px]
+                        text-slate-400 dark:text-slate-500
+                        hover:bg-primary/10 hover:text-primary
+                        dark:hover:bg-primary/15 dark:hover:text-primary
+                        active:scale-[0.93] transition-all duration-150
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      <Ban className="h-[14px] w-[14px]" />
                       {blockedUsers.length > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full text-center leading-none">
+                        <span className="pointer-events-none absolute -right-[5px] -top-[5px] flex h-[15px] min-w-[15px] items-center justify-center rounded-full border-[1.5px] border-white bg-primary px-[3px] text-[8px] font-bold leading-none text-white dark:border-slate-900">
                           {blockedUsers.length}
                         </span>
                       )}
-                    </Button>
+                    </button>
                   </DialogTrigger>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -637,6 +657,7 @@ export function StatusBar({
             </DialogContent>
           </Dialog>
         </div>
+        </div>{/* /dock */}
       </div>
       </footer>
 

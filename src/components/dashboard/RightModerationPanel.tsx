@@ -278,8 +278,6 @@ export function RightModerationPanel({
             {activePanel === "qa" && qnaEnabled && (
               <QAPanel
                 variant="sidebar"
-                onBlockUser={onBlockUser}
-                blockedUsers={blockedUsers}
                 onQuestionMetricsChange={(metrics) => {
                   setQaQueueCount(metrics.queue);
                   onQuestionMetricsChange?.(metrics);
